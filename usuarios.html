@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrices de Prueba - QA Finsus</title>
+    <link rel="stylesheet" href="vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/main.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body>
+
+    <!-- Main -->
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Administrar Usuarios</h2>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalUsuario">
+                <i class="bi bi-plus-lg"></i> Nuevo Usuario
+            </button>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Nombre</th>
+                                <th>Email</th>
+                                <th>Teléfono</th>
+                                <th>Rol</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaUsuarios"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Crear/Editar -->
+    <div class="modal fade" id="modalUsuario" tabindex="-1" aria-labelledby="modalUsuarioLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalUsuarioLabel">Agregar Usuario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formUsuario">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre</label>
+                            <input type="text" class="form-control" id="nombreUsuario" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Correo</label>
+                            <input type="email" class="form-control" id="correoUsuario" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" class="form-control" id="telefonoUsuario" pattern="\\d{10}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Rol</label>
+                            <select class="form-control" id="rolUsuario">
+                                <option>Tester</option>
+                                <option>Administrador</option>
+                                <option>Desarrollador</option>
+                                <option>Supervisor</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Guardar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script type="module">
+        import { loadNavbar } from './js/ui.js';
+        import { auth } from './js/firebase-config.js';
+        import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
+        import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
+        import { db } from './js/firebase-config.js';
+        import { logout } from './js/auth.js';
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sesión expirada',
+                    text: 'Por favor, inicia sesión nuevamente.',
+                    confirmButtonColor: '#23223F'
+                }).then(() => window.location.href = 'index.html');
+            } else if (window.currentUser && window.currentUser.role === 'Desarrollador' && window.location.pathname !== '/bugs-dashboard.html') {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Acceso restringido',
+                    text: 'Tu rol solo permite acceso al módulo de bugs.',
+                    confirmButtonColor: '#23223F'
+                }).then(() => window.location.href = 'bugs-dashboard.html');
+            }
+        });
+
+
+        // Cargar navbar/header
+        await loadNavbar();
+
+        // Mostrar datos del usuario en el header
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const ref = doc(db, 'users', user.uid);
+                const snap = await getDoc(ref);
+                if (snap.exists()) {
+                    const data = snap.data();
+                    document.getElementById('userName').textContent = data.name || user.email;
+                    document.getElementById('userRole').textContent = data.role;
+                }
+            }
+        });
+
+        window.logout = logout;
+    </script>
+    <script type="module" src="./js/auth.js"></script>
+    <script type="module" src="./js/users-admin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
