@@ -2,16 +2,13 @@ import { auth, db } from './firebase-config.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
 import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
 
-window.currentUser = null; // variable global disponible en toda la app
+window.currentUser = null;
 
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        const ref = doc(db, 'users', user.uid);
-        const snap = await getDoc(ref);
-
+        const snap = await getDoc(doc(db, 'users', user.uid));
         if (snap.exists()) {
             const data = snap.data();
-
             window.currentUser = {
                 uid: user.uid,
                 email: user.email,
@@ -20,10 +17,8 @@ onAuthStateChanged(auth, async (user) => {
                 status: data.status || 'Activo'
             };
 
-            // Mostrar datos en el header
             const userName = document.getElementById('userName');
             const userRole = document.getElementById('userRole');
-
             if (userName) userName.textContent = window.currentUser.name;
             if (userRole) userRole.textContent = window.currentUser.role;
 
@@ -34,38 +29,35 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-/**
- * 🔒 Aplica restricciones dinámicas según el rol
- */
 function aplicarRestriccionesPorRol(role) {
-    const linkUsuarios = document.getElementById('linkUsuarios');
-    const linkMatrices = document.querySelector('a[href="matrices.html"]');
-    const linkCasos = document.querySelector('a[href="casos.html"]');
-    const linkBugs = document.querySelector('a[href="bugs.html"]');
+    const linkUsuarios = document.querySelector('a[href="usuarios.html"]');
     const linkDashboard = document.querySelector('a[href="dashboard.html"]');
     const linkBugsDashboard = document.querySelector('a[href="bugs-dashboard.html"]');
 
+    // 🔹 Primero mostramos todo por defecto
+    [linkUsuarios, linkDashboard, linkBugsDashboard].forEach(link => {
+        if (link) link.style.display = 'block';
+    });
+
+    // 🔹 Luego aplicamos restricciones específicas
     switch (role) {
         case 'Administrador':
-            // acceso total
+            // Acceso completo → no se oculta nada
             break;
 
         case 'Supervisor':
-            if (linkUsuarios) linkUsuarios.style.display = 'block';
+            // Supervisor no ve usuarios
             break;
 
         case 'Tester':
+            // Tester tampoco ve usuarios
             if (linkUsuarios) linkUsuarios.style.display = 'none';
             break;
 
         case 'Desarrollador':
-            // solo acceso a dashboard de bugs
-            if (linkDashboard) linkDashboard.style.display = 'none';
-            if (linkMatrices) linkMatrices.style.display = 'none';
-            if (linkCasos) linkCasos.style.display = 'none';
+            // Desarrollador ve solo Bugs y Dashboard Bugs
             if (linkUsuarios) linkUsuarios.style.display = 'none';
-            if (linkBugs) linkBugs.style.display = 'none';
-            if (linkBugsDashboard) linkBugsDashboard.style.display = 'block';
+            if (linkDashboard) linkDashboard.style.display = 'none';
             break;
     }
 }

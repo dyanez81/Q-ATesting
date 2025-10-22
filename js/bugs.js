@@ -1,159 +1,128 @@
-import { db, auth } from './firebase-config.js';
+import { db } from './firebase-config.js';
 import {
-    collection, getDocs, query, where, updateDoc, doc, serverTimestamp, getDoc
+    collection, addDoc, getDocs, updateDoc, deleteDoc, doc, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
+import { uploadEvidence } from './evidencias.js';
+import { auth } from './firebase-config.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
-import Swal from "https://cdn.jsdelivr.net/npm/sweetalert2@11/+esm";
 
-document.addEventListener('DOMContentLoaded', () => {
-    const tableBody = document.querySelector('#bugsTable tbody');
-    const filterStatus = document.getElementById('filterStatus');
-    const filterAssignee = document.getElementById('filterAssignee');
-    const applyFilters = document.getElementById('applyFilters');
+const tabla = document.querySelector('#tablaBugs tbody');
+const form = document.getElementById('formBug');
+let editId = null;
+let currentUser = null;
 
-    let currentUserRole = null;
-    let currentUserEmail = null;
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        currentUser = user.email;
+        cargarBugs();
+    }
+});
 
-    // =============================
-    // 🔹 Detectar usuario y rol
-    // =============================
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            currentUserEmail = user.email;
-            const ref = doc(db, 'users', user.uid);
-            const snap = await getDoc(ref);
-            if (snap.exists()) currentUserRole = snap.data().role || 'Tester';
-            loadBugs();
-        }
+async function cargarBugs() {
+    tabla.innerHTML = '';
+    const ref = collection(db, 'bugs');
+    const snap = await getDocs(ref);
+    if (snap.empty) {
+        tabla.innerHTML = `<tr><td colspan="7" class="text-center text-muted">No hay bugs registrados</td></tr>`;
+        return;
+    }
+
+    let i = 1;
+    snap.forEach((docSnap) => {
+        const b = docSnap.data();
+        const color =
+            b.Estado === 'Abierto' ? 'danger' :
+                b.Estado === 'En progreso' ? 'warning text-dark' :
+                    b.Estado === 'Resuelto' ? 'success' : 'secondary';
+        const row = `
+      <tr>
+        <td>${i++}</td>
+        <td>${b.Titulo}</td>
+        <td>${b.Severidad}</td>
+        <td><span class="badge bg-${color}">${b.Estado}</span></td>
+        <td>${b.AsignadoA || '-'}</td>
+        <td>${b.Fecha?.toDate?.().toLocaleDateString?.() || '-'}</td>
+        <td>
+          ${b.EvidenciaUrl ? `<a href="${b.EvidenciaUrl}" target="_blank" class="btn btn-sm btn-outline-info">📎</a>` : ''}
+          <button class="btn btn-sm btn-outline-secondary btnEditar" data-id="${docSnap.id}">✏️</button>
+          <button class="btn btn-sm btn-outline-danger btnBorrar" data-id="${docSnap.id}">🗑️</button>
+        </td>
+      </tr>`;
+        tabla.insertAdjacentHTML('beforeend', row);
+    });
+}
+
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const data = {
+        Titulo: form.bugTitulo.value.trim(),
+        Severidad: form.bugSeveridad.value,
+        Descripcion: form.bugDescripcion.value.trim(),
+        Estado: form.bugEstado.value,
+        AsignadoA: form.bugAsignado.value.trim(),
+        CreadoPor: currentUser,
+        Fecha: serverTimestamp()
+    };
+
+    const file = form.bugEvidencia.files[0];
+    if (file) {
+        const url = await uploadEvidence('bugs', 'global', 'global', Date.now(), file);
+        data.EvidenciaUrl = url;
+        data.EvidenciaNombre = file.name;
+    }
+
+    if (editId) {
+        await updateDoc(doc(db, `bugs/${editId}`), data);
+        editId = null;
+    } else {
+        await addDoc(collection(db, 'bugs'), data);
+    }
+
+    Swal.fire({
+        icon: 'success',
+        title: 'Bug guardado correctamente',
+        confirmButtonColor: '#23223F'
     });
 
-    // =============================
-    // 🔹 Cargar bugs
-    // =============================
-    async function loadBugs() {
-        tableBody.innerHTML = `<tr><td colspan="8" class="text-center text-muted">Cargando bugs...</td></tr>`;
+    form.reset();
+    document.querySelector('#modalBug .btn-close').click();
+    cargarBugs();
+});
 
-        const status = filterStatus.value;
-        const assignee = filterAssignee.value.trim();
-        let constraints = [];
-        if (status !== 'Todos') constraints.push(where('estatus', '==', status));
-        if (assignee) constraints.push(where('asignadoA', '==', assignee));
+tabla.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    const id = btn.dataset.id;
 
-        const q = query(collection(db, 'bugs'), ...constraints);
-        const snapshot = await getDocs(q);
-
-        tableBody.innerHTML = '';
-
-        if (snapshot.empty) {
-            tableBody.innerHTML = `<tr><td colspan="8" class="text-center text-muted">No se encontraron bugs</td></tr>`;
-            return;
+    if (btn.classList.contains('btnEditar')) {
+        const snap = await getDocs(collection(db, 'bugs'));
+        const bug = snap.docs.find((d) => d.id === id)?.data();
+        if (bug) {
+            form.bugTitulo.value = bug.Titulo;
+            form.bugSeveridad.value = bug.Severidad;
+            form.bugDescripcion.value = bug.Descripcion;
+            form.bugEstado.value = bug.Estado;
+            form.bugAsignado.value = bug.AsignadoA || '';
+            editId = id;
+            new bootstrap.Modal(document.getElementById('modalBug')).show();
         }
+    }
 
-        snapshot.forEach(docSnap => {
-            const bug = docSnap.data();
-            const id = docSnap.id;
-            tableBody.insertAdjacentHTML('beforeend', renderBugRow(bug, id));
+    if (btn.classList.contains('btnBorrar')) {
+        const confirm = await Swal.fire({
+            icon: 'warning',
+            title: '¿Eliminar bug?',
+            text: 'Esta acción no se puede deshacer',
+            showCancelButton: true,
+            confirmButtonColor: '#23223F',
+            cancelButtonColor: '#aaa',
+            confirmButtonText: 'Eliminar'
         });
 
-        attachEventListeners();
-    }
-
-    // =============================
-    // 🔹 Renderizar fila de bug
-    // =============================
-    function renderBugRow(bug, id) {
-        const fecha = bug.creadoEn?.toDate ? bug.creadoEn.toDate().toLocaleDateString() : 'N/A';
-        const canEdit = currentUserRole === 'Desarrollador' || currentUserRole === 'Admin';
-        const isMine = bug.reportadoPor === currentUserEmail;
-
-        return `
-      <tr class="${isMine ? 'table-primary border-start border-4 border-info' : ''}">
-        <td>
-          ${bug.titulo}
-          ${isMine ? '<span class="badge bg-info text-dark ms-2">🧪 Mío</span>' : ''}
-        </td>
-        <td>${bug.descripcion}</td>
-        <td><span class="badge bg-${getBugStatusColor(bug.estatus)}">${bug.estatus}</span></td>
-        <td>${bug.asignadoA || '-'}</td>
-        <td>${bug.reportadoPor}</td>
-        <td>${bug.caseId}</td>
-        <td>${fecha}</td>
-        <td class="text-nowrap">
-          <button class="btn btn-sm btn-outline-primary me-2" onclick="viewBugDetail('${id}')">👁️</button>
-          ${canEdit ? `<button class="btn btn-sm btn-outline-success me-2 save-btn" data-id="${id}">✏️</button>` : ''}
-          ${canEdit ? `<button class="btn btn-sm btn-outline-danger delete-btn" data-id="${id}">🗑️</button>` : ''}
-        </td>
-      </tr>
-    `;
-    }
-
-    // =============================
-    // 🔹 Listeners de botones
-    // =============================
-    function attachEventListeners() {
-        document.querySelectorAll('.save-btn').forEach(btn =>
-            btn.addEventListener('click', async (e) => {
-                const id = e.target.dataset.id;
-                const confirm = await Swal.fire({
-                    title: 'Actualizar estatus',
-                    input: 'select',
-                    inputOptions: {
-                        'Abierto': 'Abierto',
-                        'En progreso': 'En progreso',
-                        'Resuelto': 'Resuelto',
-                        'Rechazado': 'Rechazado'
-                    },
-                    inputPlaceholder: 'Selecciona nuevo estatus',
-                    showCancelButton: true,
-                    confirmButtonText: 'Guardar',
-                    confirmButtonColor: '#23223F'
-                });
-                if (!confirm.isConfirmed) return;
-
-                await updateDoc(doc(db, 'bugs', id), {
-                    estatus: confirm.value,
-                    actualizadoEn: serverTimestamp()
-                });
-
-                Swal.fire('✅ Actualizado', 'El estatus se cambió correctamente.', 'success');
-                loadBugs();
-            })
-        );
-
-        document.querySelectorAll('.delete-btn').forEach(btn =>
-            btn.addEventListener('click', async (e) => {
-                const id = e.target.dataset.id;
-                const confirm = await Swal.fire({
-                    icon: 'warning',
-                    title: '¿Eliminar bug?',
-                    text: 'Esta acción no se puede deshacer.',
-                    showCancelButton: true,
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#6c757d',
-                    confirmButtonText: 'Sí, eliminar'
-                });
-                if (!confirm.isConfirmed) return;
-                await updateDoc(doc(db, 'bugs', id), { estatus: 'Eliminado' });
-                loadBugs();
-            })
-        );
-    }
-
-    // =============================
-    // 🔹 Color del estatus
-    // =============================
-    function getBugStatusColor(status) {
-        switch (status) {
-            case 'Abierto': return 'danger';
-            case 'En progreso': return 'warning text-dark';
-            case 'Resuelto': return 'success';
-            case 'Rechazado': return 'secondary';
-            default: return 'light text-dark';
+        if (confirm.isConfirmed) {
+            await deleteDoc(doc(db, `bugs/${id}`));
+            cargarBugs();
         }
     }
-
-    // =============================
-    // 🔹 Filtros manuales
-    // =============================
-    applyFilters.addEventListener('click', () => loadBugs());
 });

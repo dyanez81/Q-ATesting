@@ -111,35 +111,37 @@
     import { loadNavbar } from './js/ui.js';
     import { logout } from './js/auth.js';
     await loadNavbar();
-    import { auth } from './js/firebase-config.js';
-    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
-
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        Swal.fire({
-          icon: 'warning',
-          title: 'Sesión expirada',
-          text: 'Por favor, inicia sesión nuevamente.',
-          confirmButtonColor: '#23223F'
-        }).then(() => window.location.href = 'index.html');
-      } else if (window.currentUser && window.currentUser.role === 'Desarrollador' && window.location.pathname !== '/bugs-dashboard.html') {
-        Swal.fire({
-          icon: 'info',
-          title: 'Acceso restringido',
-          text: 'Tu rol solo permite acceso al módulo de bugs.',
-          confirmButtonColor: '#23223F'
-        }).then(() => window.location.href = 'bugs-dashboard.html');
-      }
-    });
-
     window.logout = logout;
+    import { auth } from './js/firebase-config.js';
+     import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
+ 
+     onAuthStateChanged(auth, (user) => {
+       if (!user) {
+         Swal.fire({
+           icon: 'warning',
+           title: 'Sesión expirada',
+           text: 'Por favor, inicia sesión nuevamente.',
+           confirmButtonColor: '#23223F'
+         }).then(() => window.location.href = 'index.html');
+       } else if (window.currentUser && window.currentUser.role === 'Desarrollador' && window.location.pathname !== '/bugs-dashboard.html') {
+         Swal.fire({
+           icon: 'info',
+           title: 'Acceso restringido',
+           text: 'Tu rol solo permite acceso al módulo de bugs.',
+           confirmButtonColor: '#23223F'
+         }).then(() => window.location.href = 'bugs-dashboard.html');
+       }
+     });
+
+
   </script>
-
-  <!-- users.js carga info del usuario -->
+  <!-- 🔧 SCRIPTS ORDENADOS -->
+  <script type="module" src="./js/firebase-config.js"></script>
+  <script type="module" src="./js/auth.js"></script>
+  <script type="module" src="./js/ui.js"></script>
   <script type="module" src="./js/users.js"></script>
-
-  <!-- dashboard principal -->
   <script type="module" src="./js/dashboard-user.js"></script>
+
 </body>
 
 </html>

@@ -5,10 +5,9 @@ import {
     onAuthStateChanged,
     signOut
 } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
-import {
-    doc, getDoc
-} from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
+import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
 
+// Detectar página
 const path = window.location.pathname;
 const isLogin = path.endsWith('/index.html') || path === '/' || path.endsWith('\\index.html');
 const isUsuarios = path.endsWith('/usuarios.html') || path.endsWith('usuarios.html');
@@ -22,7 +21,6 @@ if (isLogin) {
         e.preventDefault();
         const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value.trim();
-
         if (pendingMessage) pendingMessage.style.display = 'none';
 
         try {
@@ -35,9 +33,8 @@ if (isLogin) {
                 await Swal.fire({
                     icon: 'warning',
                     title: 'Cuenta no registrada',
-                    text: 'No tienes una cuenta registrada en el sistema. Por favor, regístrate primero.',
-                    confirmButtonColor: '#1a73e8',
-                    confirmButtonText: 'Ir al registro'
+                    text: 'No se encontró tu perfil en la base de datos. Regístrate primero.',
+                    confirmButtonColor: '#1a73e8'
                 });
                 await signOut(auth);
                 window.location.href = './register.html';
@@ -45,63 +42,46 @@ if (isLogin) {
             }
 
             const data = snap.data();
-
             if (data.status !== 'Activo') {
                 if (pendingMessage) pendingMessage.style.display = 'block';
                 await Swal.fire({
-                    toast: true,
-                    position: 'top-end',
                     icon: 'info',
                     title: 'Cuenta pendiente',
                     text: 'Un administrador debe aprobar tu cuenta.',
-                    showConfirmButton: false,
-                    timer: 3000
+                    confirmButtonColor: '#23223F'
                 });
                 await signOut(auth);
                 return;
             }
 
-            // ✅ Usuario válido y activo
+            // Guardar info global
+            window.currentUser = {
+                uid: user.uid,
+                email: user.email,
+                name: data.name || user.email,
+                role: data.role || 'Tester',
+                status: data.status || 'Activo'
+            };
+
             await Swal.fire({
                 icon: 'success',
-                title: 'Bienvenido',
-                text: `¡Hola ${data.name || 'usuario'}!`,
+                title: `¡Bienvenido, ${window.currentUser.name}!`,
                 timer: 1500,
                 showConfirmButton: false
             });
 
-            // Redirigir a dashboard general
+            // Redirigir al dashboard general
             window.location.href = './dashboard.html';
         } catch (err) {
-            if (err.code === 'auth/user-not-found') {
-                await Swal.fire({
-                    icon: 'warning',
-                    title: 'Usuario no encontrado',
-                    text: 'No se encontró una cuenta con este correo. Regístrate primero.',
-                    confirmButtonColor: '#1a73e8',
-                    confirmButtonText: 'Ir al registro'
-                });
-                window.location.href = './register.html';
-            } else if (err.code === 'auth/wrong-password') {
-                await Swal.fire({
-                    icon: 'error',
-                    title: 'Contraseña incorrecta',
-                    text: 'Verifica tus credenciales e intenta nuevamente.',
-                    confirmButtonColor: '#d33'
-                });
-            } else {
-                await Swal.fire({
-                    icon: 'error',
-                    title: 'Error de inicio de sesión',
-                    text: err.message,
-                    confirmButtonColor: '#d33'
-                });
-            }
+            let msg = 'Error de inicio de sesión.';
+            if (err.code === 'auth/user-not-found') msg = 'Usuario no encontrado. Regístrate primero.';
+            if (err.code === 'auth/wrong-password') msg = 'Contraseña incorrecta.';
+            await Swal.fire({ icon: 'error', title: 'Inicio de sesión fallido', text: msg });
         }
     });
 }
 
-// --- CONTROL DE ROLES Y ACCESO ---
+// --- CONTROL GLOBAL DE SESIÓN Y ROLES ---
 onAuthStateChanged(auth, async (user) => {
     if (!user && !isLogin) {
         window.location.href = './index.html';
@@ -112,16 +92,25 @@ onAuthStateChanged(auth, async (user) => {
         const ref = doc(db, 'users', user.uid);
         const snap = await getDoc(ref);
 
-        let role = 'Tester';
-        let status = 'Pendiente';
-
-        if (snap.exists()) {
-            const data = snap.data();
-            role = data.role || 'Tester';
-            status = data.status || 'Pendiente';
+        if (!snap.exists()) {
+            await signOut(auth);
+            window.location.href = './index.html';
+            return;
         }
 
-        // Bloquear acceso a no activos
+        const data = snap.data();
+        const role = data.role || 'Tester';
+        const status = data.status || 'Pendiente';
+
+        window.currentUser = {
+            uid: user.uid,
+            email: user.email,
+            name: data.name || user.email,
+            role,
+            status
+        };
+
+        // Bloquear usuarios inactivos
         if (status !== 'Activo' && !isLogin) {
             await Swal.fire({
                 icon: 'info',
@@ -134,21 +123,16 @@ onAuthStateChanged(auth, async (user) => {
             return;
         }
 
-        // 🔹 Mostrar u ocultar menú Usuarios
-        const usersLink = document.querySelector('a[href$="usuarios.html"]');
-        if (usersLink) usersLink.style.display = role === 'Administrador' ? 'block' : 'none';
-
-        // 🔹 Si no es admin y trata de entrar a usuarios.html → redirigir
-        if (isUsuarios && role !== 'Administrador') {
+      // Si no es admin/supervisor → bloquear acceso a usuarios.html
+        if (isUsuarios && !['Administrador', 'Supervisor'].includes(role)) {
             await Swal.fire({
                 icon: 'error',
                 title: 'Acceso restringido',
-                text: 'Solo los administradores pueden acceder a esta sección.',
+                text: 'Solo administradores o supervisores pueden acceder aquí.',
                 confirmButtonColor: '#d33'
             });
             window.location.href = './dashboard.html';
-            return;
-        }
+        } 
     }
 });
 
@@ -160,21 +144,11 @@ export async function logout() {
         showCancelButton: true,
         confirmButtonColor: '#1a73e8',
         cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Sí, salir',
-        cancelButtonText: 'Cancelar'
+        confirmButtonText: 'Sí, salir'
     });
 
     if (!confirmLogout.isConfirmed) return;
 
-    try {
-        await signOut(auth);
-        window.location.href = './index.html';
-    } catch (error) {
-        console.error('Error al cerrar sesión:', error);
-        await Swal.fire({
-            icon: 'error',
-            title: 'Error al cerrar sesión',
-            text: error.message
-        });
-    }
+    await signOut(auth);
+    window.location.href = './index.html';
 }

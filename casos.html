@@ -5,290 +5,115 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Casos de Prueba - QA Finsus</title>
-
-    <link rel="icon" type="image/png" href="images/icons/favicon.ico" />
     <link rel="stylesheet" href="vendor/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="css/main.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>window.Swal = Swal;</script>
-
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-
-        .main-content {
-            margin-left: 230px;
-            padding: 20px;
-        }
-    </style>
 </head>
 
 <body>
-    <!-- Barra lateral + header -->
-    <div id="navbarContainer"></div>
 
+    <!-- Contenido principal -->
     <div class="main-content">
-        <div class="container-fluid mt-4 mb-5">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h3 class="text-start" style="color:#23223F;">📋 Casos de Prueba</h3>
-                    <p class="text-muted mb-0" id="matrixName"></p>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Casos de Prueba</h2>
+            <button class="btn btn-primary" id="btnNuevo" data-bs-toggle="modal" data-bs-target="#modalCaso">
+                <i class="bi bi-plus-lg"></i> Nuevo Caso
+            </button>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="tablaCasos">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Nombre del Caso</th>
+                                <th>Tipo</th>
+                                <th>Estado</th>
+                                <th>Tester</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
-                <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#newCaseModal">
-                    ➕ Nuevo caso
-                </button>
-            </div>
-
-            <div class="card shadow p-3">
-                <h5 class="mb-3">Casos registrados</h5>
-                <table class="table table-striped align-middle" id="casesTable">
-                    <thead style="background:#23223F; color:white;">
-                        <tr>
-                            <th>Nombre del caso</th>
-                            <th>Tipo</th>
-                            <th>Estatus</th>
-                            <th>Tester</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-
-            <div class="mt-4">
-                <a href="matrices.html" class="btn btn-outline-secondary">⬅️ Volver a matrices</a>
             </div>
         </div>
     </div>
 
-    <!-- 🐞 Modal para reportar nuevo Bug -->
-
-    <div class="modal fade" id="bugsModal" tabindex="-1" aria-labelledby="bugsLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content" style="border-radius: 15px;">
-                <div class="modal-header" style="background-color:#23223F; color:white;">
-                    <h5 class="modal-title fw-semibold" id="bugsLabel">🐞 Reportar Bug</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                        aria-label="Cerrar"></button>
+    <!-- Modal para Crear/Editar Caso -->
+    <div class="modal fade" id="modalCaso" tabindex="-1" aria-labelledby="modalCasoLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalCasoLabel">Agregar Caso de Prueba</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-
-                <form id="bugForm">
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <h6 class="fw-semibold">Matriz: <span id="bugMatrixName" class="text-primary"></span></h6>
-                            <h6 class="fw-semibold">Caso: <span id="bugCaseName" class="text-primary"></span></h6>
-                        </div>
-
+                <div class="modal-body">
+                    <form id="formCaso">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">Título del bug</label>
-                                <input type="text" id="bugTitulo" class="form-control"
-                                    placeholder="Ej: Error al guardar datos" required>
+                                <label class="form-label">Nombre del Caso</label>
+                                <input type="text" class="form-control" id="NombreDelCaso" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Asignar a</label>
-                                <input type="text" id="bugAsignado" class="form-control"
-                                    placeholder="Ej: dev@finsus.com">
+                                <label class="form-label">Tipo de Prueba</label>
+                                <input type="text" class="form-control" id="TipoDePrueba">
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Descripción</label>
-                                <textarea id="bugDescripcion" class="form-control" rows="3"
-                                    placeholder="Describe brevemente el error encontrado..." required></textarea>
+                                <textarea class="form-control" id="Descripcion" rows="2"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Pasos</label>
+                                <textarea class="form-control" id="Pasos" rows="3"></textarea>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Estatus inicial</label>
-                                <select id="bugEstatus" class="form-control" required>
-                                    <option value="Abierto">Abierto</option>
-                                    <option value="En progreso">En progreso</option>
-                                    <option value="Resuelto">Resuelto</option>
-                                    <option value="Rechazado">Rechazado</option>
+                                <label class="form-label">Resultado Esperado</label>
+                                <input type="text" class="form-control" id="ResultadoEsperado">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Estado</label>
+                                <select class="form-control" id="Estado">
+                                    <option>Pendiente</option>
+                                    <option>Positivo</option>
+                                    <option>Fallo</option>
+                                    <option>Bloqueado</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Reportado por</label>
-                                <input type="text" id="bugReportadoPor" class="form-control" readonly>
+                                <label class="form-label">Evidencia (imagen o PDF)</label>
+                                <input type="file" id="Evidencia" class="form-control" accept=".png,.jpg,.jpeg,.pdf">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Referencia HU</label>
+                                <input type="text" id="ReferenciaHU" class="form-control">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Comentarios</label>
+                                <textarea id="Comentarios" class="form-control" rows="2"></textarea>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="modal-footer bg-light">
-                        <button type="button" class="btn btn-outline-secondary"
-                            data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-dark">💾 Registrar Bug</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    <!-- 🧩 Modal para registrar nuevo caso -->
-    <div class="modal fade" id="newCaseModal" tabindex="-1" aria-labelledby="caseLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content" style="border-radius: 15px;">
-                <div class="modal-header" style="background-color:#23223F; color:white;">
-                    <h5 class="modal-title fw-semibold" id="caseLabel">🧩 Registrar nuevo caso de prueba</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                        aria-label="Cerrar"></button>
-                </div>
-
-                <form id="caseForm" class="p-3">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Nombre del caso</label>
-                            <input type="text" name="nombreCaso" class="form-control" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Tipo</label>
-                            <select name="tipo" class="form-control" required>
-                                <option value="Funcional">Funcional</option>
-                                <option value="UI/UX">UI/UX</option>
-                                <option value="Integración">Integración</option>
-                                <option value="Regresión">Regresión</option>
-                                <option value="Performance">Performance</option>
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Descripción</label>
-                            <textarea name="descripcion" class="form-control" rows="2"></textarea>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Precondiciones</label>
-                            <textarea name="precondiciones" class="form-control" rows="2"></textarea>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Pasos</label>
-                            <textarea name="pasos" class="form-control" rows="2"></textarea>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Resultado esperado</label>
-                            <textarea name="resultadoEsperado" class="form-control" rows="2"></textarea>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Estatus</label>
-                            <select name="estatus" class="form-control">
-                                <option value="Pendiente">Pendiente</option>
-                                <option value="En ejecución">En ejecución</option>
-                                <option value="Completado">Completado</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Tester</label>
-                            <input type="text" id="tester" name="tester" class="form-control" readonly>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Evidencia (opcional)</label>
-                            <input type="file" id="bugImage" class="form-control" accept="image/*" />
-                        </div>
-                    </div>
-                    <div class="modal-footer bg-light mt-3">
-                        <button type="button" class="btn btn-outline-secondary"
-                            data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-dark">💾 Guardar caso</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    <!-- 🐞 Modal de Seguimiento de Bugs -->
-    <div class="modal fade" id="bugsModal" tabindex="-1" aria-labelledby="bugsModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content border-0 shadow-sm">
-                <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title" id="bugsModalLabel">🐞 Seguimiento de Bugs</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                        aria-label="Cerrar"></button>
-                </div>
-
-                <div class="modal-body">
-                    <h6 id="bugCaseName" class="mb-3 text-primary fw-semibold"></h6>
-
-                    <!-- Formulario para registrar nuevo bug -->
-                    <form id="bugForm" class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label class="form-label">Título del bug</label>
-                            <input type="text" class="form-control" id="bugTitulo"
-                                placeholder="Ej. Error al enviar formulario" required>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Asignar a</label>
-                            <input type="text" class="form-control" id="bugAsignado"
-                                placeholder="Correo del desarrollador">
-                        </div>
-
-                        <div class="col-12">
-                            <label class="form-label">Descripción</label>
-                            <textarea class="form-control" id="bugDescripcion" rows="3"
-                                placeholder="Describe el error encontrado..." required></textarea>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Estatus</label>
-                            <select class="form-select" id="bugEstatus" required>
-                                <option value="Abierto" selected>Abierto</option>
-                                <option value="En progreso">En progreso</option>
-                                <option value="Resuelto">Resuelto</option>
-                                <option value="Rechazado">Rechazado</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Reportado por</label>
-                            <input type="email" id="bugReportadoPor" class="form-control" readonly>
-                        </div>
-
-                        <div class="col-12">
-                            <label class="form-label">Evidencia (opcional)</label>
-                            <input type="file" id="bugImage" class="form-control" accept="image/*">
-                        </div>
-
-                        <div class="col-12 text-end">
-                            <button type="submit" class="btn btn-dark px-4">Guardar Bug</button>
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary w-100">Guardar</button>
                         </div>
                     </form>
-
-                    <!-- Tabla de bugs registrados -->
-                    <h6 class="fw-semibold text-secondary mb-2">📋 Bugs registrados</h6>
-                    <div class="table-responsive">
-                        <table class="table table-sm align-middle" id="bugsTable">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Título</th>
-                                    <th>Descripción</th>
-                                    <th>Estatus</th>
-                                    <th>Reportado por</th>
-                                    <th>Asignado a</th>
-                                    <th>Evidencia</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td colspan="7" class="text-center text-muted">No hay bugs registrados</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
                 </div>
             </div>
         </div>
     </div>
 
-
-    <!-- Scripts -->
+    <!-- SCRIPTS -->
     <script type="module">
         import { loadNavbar } from './js/ui.js';
-        import { auth, db } from './js/firebase-config.js';
+        import { auth } from './js/firebase-config.js';
         import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
         import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
+        import { db } from './js/firebase-config.js';
         import { logout } from './js/auth.js';
 
-        await loadNavbar();
-
+        // Validar sesión y rol
         onAuthStateChanged(auth, (user) => {
             if (!user) {
                 Swal.fire({
@@ -307,6 +132,10 @@
             }
         });
 
+        // Cargar navbar/header
+        await loadNavbar();
+
+        // Mostrar datos del usuario en el header
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const ref = doc(db, 'users', user.uid);
@@ -314,7 +143,7 @@
                 if (snap.exists()) {
                     const data = snap.data();
                     document.getElementById('userName').textContent = data.name || user.email;
-                    document.getElementById('userRole').textContent = data.role || 'Tester';
+                    document.getElementById('userRole').textContent = data.role;
                 }
             }
         });
@@ -322,9 +151,11 @@
         window.logout = logout;
     </script>
 
-    <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script type="module" src="./js/auth.js"></script>
+    <script type="module" src="./js/evidencias.js"></script>
     <script type="module" src="./js/casos.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 </body>
 
 </html>
