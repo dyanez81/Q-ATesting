@@ -1,35 +1,30 @@
 <!-- /components/navbar.html -->
 <div id="globalSidebar" class="sidebar">
   <div>
-    <h5 class="text-center mt-3">🧪 <span>QA Finsus</span></h5>
+    <h5 class="text-center mb-4">🧪 QA Finsus</h5>
 
     <!-- 🔹 Navegación principal -->
-    <a href="dashboard.html" class="nav-link d-flex align-items-center gap-2 mt-2">
-      <i class="bi bi-diagram-3 mr-1"></i><span>Dashboard</span> 
+    <a href="dashboard.html" class="nav-link d-flex align-items-center gap-2">
+      <i class="bi bi-diagram-3"></i> <span>Dashboard</span>
     </a>
 
     <a href="matrices.html" class="nav-link d-flex align-items-center gap-2">
-      <i class="bi bi-check2-circle mr-1"></i><span>Matrices</span> 
+      <i class="bi bi-check2-circle"></i> <span>Matrices</span>
     </a>
 
-    <!-- 🧩 Casos -->
-    <a href="casos.html" class="nav-link d-flex align-items-center gap-2">
-      <i class="bi bi-list-check mr-1"></i><span>Casos</span> 
-    </a>
-
-    <!-- 🐞 Módulos de Bugs -->
+    <!-- 🐞 Módulo de Bugs -->
     <a href="bugs.html" class="nav-link d-flex align-items-center gap-2">
-      <i class="bi bi-bug mr-1"></i> <span>Bugs</span>
+      <i class="bi bi-bug"></i> <span>Bugs</span>
     </a>
 
-    <!-- 📊 Nuevo: Dashboard de Bugs -->
-    <a href="bugs-dashboard.html" class="nav-link d-flex align-items-center gap-2">
-      <i class="bi bi-bar-chart-fill mr-1"></i><span>Dashboard Bugs</span> 
-    </a>
-
-    <!-- 👥 Solo visible para administradores -->
+    <!-- 👥 Usuarios (solo roles altos) -->
     <a href="usuarios.html" id="linkUsuarios" class="nav-link d-flex align-items-center gap-2">
-      <i class="bi bi-people mr-1"></i> <span>Usuarios</span>
+      <i class="bi bi-people"></i> <span>Usuarios</span>
+    </a>
+
+    <!-- 🧰 Apps (solo roles altos) -->
+    <a href="apps.html" id="linkApps" class="nav-link d-flex align-items-center gap-2">
+      <i class="bi bi-folder2-open"></i> <span>Apps</span>
     </a>
   </div>
 
@@ -37,7 +32,7 @@
   <div class="p-3 text-center">
     <hr style="border-color: rgba(255,255,255,0.2);">
     <button onclick="logout()" class="btn btn-outline-light btn-sm w-100">
-      <i class="bi bi-box-arrow-right mr-1"></i><span>Cerrar sesión</span> 
+      <i class="bi bi-box-arrow-right"></i> <span>Cerrar sesión</span>
     </button>
   </div>
 </div>
@@ -49,8 +44,17 @@
     <h5 class="mb-0 fw-bold" style="color:#23223F;">QA Finsus</h5>
   </div>
 
-  <div id="userInfo" class="text-end">
-    <span id="userName" class="fw-semibold"></span><br>
-    <small id="userRole" class="text-muted"></small>
+  <!-- Dropdown del usuario -->
+  <div id="userInfo" class="dropdown">
+    <a href="#" class="d-block text-end text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+      <span id="userName" class="fw-semibold"></span><br>
+      <small id="userRole" class="text-muted"></small>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end shadow">
+      <li><a class="dropdown-item" href="perfil.html"><i class="bi bi-person-circle me-2 mr-1"></i>Perfil</a></li>
+      <li><a class="dropdown-item" href="tareas.html"><i class="bi bi-list-task me-2 mr-1"></i>Mis Tareas</a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item text-danger" href="#" onclick="logout()"><i class="bi bi-box-arrow-right mr-2"></i>Salir</a></li>
+    </ul>
   </div>
 </div>
