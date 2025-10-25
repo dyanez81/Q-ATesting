@@ -2,27 +2,24 @@
 <html lang="es">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Matrices de Prueba - QA Finsus</title>
 
-    <link rel="stylesheet" href="vendor/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="vendor/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body>
-    <!-- Contenido principal -->
     <div class="main-content">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="fw-bold">Matrices de Prueba</h2>
-            <button class="btn btn-primary" id="btnNuevaMatriz" data-bs-toggle="modal" data-bs-target="#modalMatriz">
+            <h2>Matrices de Prueba</h2>
+            <button class="btn btn-primary" id="btnNueva" data-bs-toggle="modal" data-bs-target="#modalMatriz">
                 <i class="bi bi-plus-lg"></i> Nueva Matriz
             </button>
         </div>
-
-        <!-- Tabla de matrices -->
         <div class="card border-0 shadow-sm">
             <div class="card-body">
                 <div class="table-responsive">
@@ -31,19 +28,21 @@
                             <tr>
                                 <th>#</th>
                                 <th>Nombre</th>
-                                <th>Aplicación</th>
+                                <th>App</th>
                                 <th>Módulo</th>
                                 <th>Descripción</th>
                                 <th>Ambiente</th>
                                 <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr>
-                                <td colspan="8" class="text-center text-muted py-4">Cargando matrices...</td>
-                            </tr>
-                        </tbody>
+                        <tbody></tbody>
                     </table>
+                </div>
+
+                <div class="mt-3">
+                    <button id="btnRecargarMatrices" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-repeat me-1"></i> Recargar
+                    </button>
                 </div>
             </div>
         </div>
@@ -52,56 +51,38 @@
     <!-- Modal Crear/Editar Matriz -->
     <div class="modal fade" id="modalMatriz" tabindex="-1" aria-labelledby="modalMatrizLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
-            <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-primary text-white">
+            <div class="modal-content">
+                <div class="modal-header">
                     <h5 class="modal-title" id="modalMatrizLabel">Registrar Matriz</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-
                 <div class="modal-body">
                     <form id="formMatriz" class="row g-3">
                         <div class="col-md-6">
-                            <label for="nombreMatriz" class="form-label fw-semibold">Nombre de la Matriz</label>
-                            <input type="text" id="nombreMatriz" class="form-control" required>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="descripcionMatriz" class="form-label fw-semibold">Descripción</label>
-                            <input type="text" id="descripcionMatriz" class="form-control">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="appRelacionada" class="form-label fw-semibold">Aplicación / Módulo</label>
+                            <label class="form-label">Aplicación / Módulo</label>
                             <select id="appRelacionada" class="form-control" required>
                                 <option value="">Seleccionar aplicación...</option>
                             </select>
                         </div>
-
                         <div class="col-md-6">
-                            <label for="ambienteMatriz" class="form-label fw-semibold">Ambiente</label>
-                            <select id="ambienteMatriz" class="form-control">
-                                <option value="Desarrollo">Desarrollo</option>
-                                <option value="Producción">Producción</option>
-                            </select>
+                            <label class="form-label">Nombre de la Matriz</label>
+                            <input type="text" id="nombreMatriz" class="form-control" required />
                         </div>
-
+                        <div class="col-12">
+                            <label class="form-label">Descripción</label>
+                            <textarea id="descripcionMatriz" class="form-control" rows="2"></textarea>
+                        </div>
                         <div class="col-md-6">
-                            <label for="moduloMatriz" class="form-label fw-semibold">Módulo</label>
-                            <input type="text" id="moduloMatriz" class="form-control">
+                            <label class="form-label">Ambiente</label>
+                            <input type="text" id="ambienteMatriz" class="form-control"
+                                placeholder="QA / Desarrollo / Producción" />
                         </div>
-
                         <div class="col-md-6">
-                            <label for="submoduloMatriz" class="form-label fw-semibold">Submódulo</label>
-                            <input type="text" id="submoduloMatriz" class="form-control">
+                            <label class="form-label">Submódulo (opcional)</label>
+                            <input type="text" id="submoduloMatriz" class="form-control" />
                         </div>
-
-                        <div class="col-12 text-end mt-3">
-                            <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">
-                                <i class="bi bi-x-circle"></i> Cancelar
-                            </button>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-save"></i> Guardar
-                            </button>
+                        <div class="col-12 mt-2">
+                            <button type="submit" class="btn btn-primary w-100">Guardar</button>
                         </div>
                     </form>
                 </div>
@@ -109,41 +90,14 @@
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- Navbar loader -->
     <script type="module">
         import { loadNavbar } from './js/ui.js';
         await loadNavbar();
-
-        // ✅ Título dinámico del modal
-        const modalMatrizEl = document.getElementById('modalMatriz');
-        const modalLabel = document.getElementById('modalMatrizLabel');
-        const form = document.getElementById('formMatriz');
-        const btnNueva = document.getElementById('btnNuevaMatriz');
-
-        if (modalMatrizEl) {
-            modalMatrizEl.addEventListener('show.bs.modal', (event) => {
-                const button = event.relatedTarget;
-
-                // Si se abre desde "Nueva Matriz"
-                if (button && button.id === 'btnNuevaMatriz') {
-                    modalLabel.textContent = 'Registrar Matriz';
-                    form.reset();
-                }
-            });
-
-            // Si se cierra el modal, limpiar todo
-            modalMatrizEl.addEventListener('hidden.bs.modal', () => {
-                modalLabel.textContent = 'Registrar Matriz';
-                form.reset();
-            });
-        }
-
-        // Cuando se abre para editar, el título se actualiza desde matrices.js
-        window.setTituloEditar = () => {
-            modalLabel.textContent = 'Editar Matriz';
-        };
     </script>
 
+    <!-- Scripts -->
+    <script type="module" src="./js/firebase-config.js"></script>
     <script type="module" src="./js/matrices.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>

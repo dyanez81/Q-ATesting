@@ -2,40 +2,28 @@
 <html lang="es">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bugs - QA Finsus</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Bugs - QA Finsus</title>
 
-    <!-- 🔹 Estilos base -->
-    <link rel="stylesheet" href="vendor/bootstrap/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="css/main.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+    <link rel="stylesheet" href="vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <style>
-        .card-icon {
-            font-size: 1.5rem;
-            color: #23223F;
-        }
-
-        .main-content {
-            padding: 20px;
-            padding-top: 90px;
-        }
-    </style>
 </head>
 
 <body>
-    <!-- 🔹 Contenido principal -->
     <div class="main-content">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2><i class="bi bi-bug me-2"></i>Gestión de Bugs</h2>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalBug">
-                <i class="bi bi-plus-lg"></i> Nuevo Bug
-            </button>
+            <h2>Gestión de Bugs</h2>
+            <div>
+                <button id="btnRecargar" class="btn btn-outline-primary me-2">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Recargar
+                </button>
+            </div>
         </div>
 
-        <!-- 📋 Tabla de bugs -->
+        <!-- Tabla de Bugs -->
         <div class="card border-0 shadow-sm">
             <div class="card-body">
                 <div class="table-responsive">
@@ -43,125 +31,101 @@
                         <thead class="table-light">
                             <tr>
                                 <th>#</th>
-                                <th>Título</th>
-                                <th>Prioridad</th>
-                                <th>Estatus</th>
-                                <th>Reportado por</th>
-                                <th>Fecha</th>
+                                <th>Nombre</th>
+                                <th>Descripción</th>
+                                <th>Estado</th>
+                                <th>Tester</th>
+                                <th>App / Caso</th>
+                                <th>Evidencia</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
                     </table>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 🧩 Modal Crear / Editar Bug -->
-    <div class="modal fade" id="modalBug" tabindex="-1" aria-labelledby="modalBugLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalBugLabel">Registrar Bug</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="formBug">
-                        <input type="hidden" id="bugId">
-
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Título</label>
-                                <input type="text" id="bugTitulo" class="form-control" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Prioridad</label>
-                                <select id="bugPrioridad" class="form-control" required>
-                                    <option>Alta</option>
-                                    <option>Media</option>
-                                    <option>Baja</option>
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">Descripción</label>
-                                <textarea id="bugDescripcion" class="form-control" rows="3" required></textarea>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Estatus</label>
-                                <select id="bugEstado" class="form-control">
-                                    <option>Abierto</option>
-                                    <option>En revisión</option>
-                                    <option>Resuelto</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="mt-4 d-flex justify-content-end gap-2">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                <i class="bi bi-x-lg"></i> Cancelar
-                            </button>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-save"></i> Guardar
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- 🧾 Modal Detalle de Bug -->
-    <div class="modal fade" id="modalDetalleBug" tabindex="-1" aria-labelledby="modalDetalleBugLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-light">
-                    <h5 class="modal-title" id="modalDetalleBugLabel"><i class="bi bi-eye me-2"></i>Detalle del Bug</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <dl class="row mb-0">
-                        <dt class="col-sm-3">Título</dt>
-                        <dd class="col-sm-9" id="detalleTitulo"></dd>
-
-                        <dt class="col-sm-3">Prioridad</dt>
-                        <dd class="col-sm-9" id="detallePrioridad"></dd>
-
-                        <dt class="col-sm-3">Estado</dt>
-                        <dd class="col-sm-9" id="detalleEstado"></dd>
-
-                        <dt class="col-sm-3">Descripción</dt>
-                        <dd class="col-sm-9" id="detalleDescripcion"></dd>
-
-                        <dt class="col-sm-3">Reportado por</dt>
-                        <dd class="col-sm-9" id="detalleReportadoPor"></dd>
-
-                        <dt class="col-sm-3">Fecha</dt>
-                        <dd class="col-sm-9" id="detalleFecha"></dd>
-
-                        <dt class="col-sm-3">Evidencia</dt>
-                        <dd class="col-sm-9" id="detalleEvidencia"></dd>
-                    </dl>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-lg"></i> Cerrar
+                <div class="d-flex justify-content-between align-items-end mb-4">
+                    <button class="btn btn-outline-secondary" id="btnVolver">
+                        <i class="bi bi-arrow-left"></i> Volver a Casos
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Modal Detalle / Edición -->
+    <div class="modal fade" id="modalBug" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Detalle del Bug</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formBug" class="row g-3">
+                        <!-- Info básica -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Nombre</label>
+                            <input type="text" id="nombreBug" class="form-control" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tester</label>
+                            <input type="text" id="testerBug" class="form-control" readonly>
+                        </div>
 
-    <!-- 🔧 Scripts principales -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Descripción</label>
+                            <textarea id="descripcionBug" class="form-control" rows="2" readonly></textarea>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Estado</label>
+                            <select id="estadoBug" class="form-control">
+                                <option value="Abierto">Abierto</option>
+                                <option value="Corregido">Corregido</option>
+                                <option value="Validado">Validado</option>
+                            </select>
+                        </div>
+                    </form>
+                    <hr />
+                    <!-- Sección: Solución del Bug -->
+                    <div class="text-center my-3">
+                        <h6 class="fw-bold text-primary">
+                            <i class="bi bi-tools me-1"></i> Solución del Bug
+                        </h6>
+                    </div>
+
+                    <div class="row align-items-start g-3">
+                        <!-- Columna izquierda: Comentarios -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Comentarios</label>
+                            <textarea id="comentarioSolucion" class="form-control" rows="3"
+                                placeholder="Describe la corrección o validación..."></textarea>
+                        </div>
+
+                        <!-- Columna derecha: Evidencia -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Evidencia (imagen o PDF)</label>
+                            <input type="file" id="evidenciaSolucion" class="form-control" accept="image/*,.pdf">
+                            <div id="previewEvidencia" class="mt-3"></div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 text-end mt-3">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-save me-2"></i> Guardar Cambios
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
     <script type="module">
         import { loadNavbar } from './js/ui.js';
-        import { logout } from './js/auth.js';
-        await loadNavbar();
-        window.logout = logout;
+        loadNavbar();
     </script>
-
-    <!-- 🔹 Scripts funcionales -->
+    <script type="module" src="./js/firebase-config.js"></script>
     <script type="module" src="./js/bugs.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>

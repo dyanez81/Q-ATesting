@@ -22,7 +22,7 @@ let editandoId = null;
 
 // --- 🔹 Cargar testers ---
 async function cargarTesters() {
-    testerSelect.innerHTML = '<option value="">Seleccionar Tester</option>';
+    testerSelect.innerHTML = '<option value="">QA Finsus</option>';
 
     try {
         const usersRef = collection(db, 'users');
@@ -78,7 +78,7 @@ function cargarApps() {
         <td>${i++}</td>
         <td>${data.nombre || '-'}</td>
         <td>${data.tipo || '-'}</td>
-        <td>${data.testerNombre || data.tester || '-'}</td>
+        <td>${data.testerNombre || data.tester || 'QA Finsus'}</td>
         <td>${data.requerimiento || '-'}</td>
         <td>${data.fechaFin ? new Date(data.fechaFin.toDate()).toLocaleDateString() : '-'}</td>
         <td class="text-center">

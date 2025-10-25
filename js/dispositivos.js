@@ -1,3 +1,4 @@
+// /js/dispositivos.js
 import { db } from './firebase-config.js';
 import {
     collection,
@@ -23,6 +24,10 @@ let editandoId = null;
 async function cargarUsuarios() {
     try {
         const snapshot = await getDocs(collection(db, 'users'));
+        selectAsignado.innerHTML = `
+      <option value="">Seleccionar usuario...</option>
+      <option value="manual">Otro (escribir manualmente)</option>
+    `;
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
             if (['Tester', 'Desarrollador'].includes(data.role)) {
@@ -43,6 +48,7 @@ selectAsignado.addEventListener('change', () => {
         inputManual.classList.remove('d-none');
     } else {
         inputManual.classList.add('d-none');
+        inputManual.value = '';
     }
 });
 
@@ -51,6 +57,7 @@ async function cargarDispositivos() {
     const snapshot = await getDocs(collection(db, 'dispositivos'));
     tabla.innerHTML = '';
     let i = 1;
+
     snapshot.forEach(docSnap => {
         const data = docSnap.data();
         const tr = document.createElement('tr');
@@ -61,8 +68,29 @@ async function cargarDispositivos() {
       <td>${data.modelo || '-'}</td>
       <td>${data.sistemaOperativo || '-'}</td>
       <td>${data.version || '-'}</td>
-      <td>${data.asignadoA || '-'}</td>
-      <td>${data.estado || '-'}</td>
+      <td>${data.asignadoA || 'Finsus'}</td>
+      <td>${(() => {
+                const estado = (data.estado || 'Disponible').toLowerCase();
+                if (estado === 'disponible') {
+                    return `<span class="badge bg-success d-flex align-items-center justify-content-center gap-1">
+                <i class="bi bi-check-circle-fill mr-1"></i> Disponible
+              </span>`;
+                } else if (estado === 'asignado') {
+                    return `<span class="badge bg-primary d-flex align-items-center justify-content-center gap-1">
+                <i class="bi bi-person-badge-fill mr-1"></i> Asignado
+              </span>`;
+                } else if (estado === 'dañado') {
+                    return `<span class="badge bg-danger d-flex align-items-center justify-content-center gap-1">
+                <i class="bi bi-exclamation-triangle-fill mr-1"></i> Dañado
+              </span>`;
+                } else {
+                    return `<span class="badge bg-secondary d-flex align-items-center justify-content-center gap-1">
+                <i class="bi bi-question-circle-fill mr-1"></i> ${data.estado}
+              </span>`;
+                }
+            })()}
+        </td>
+
       <td class="text-center">
         <button class="btn btn-sm btn-outline-primary me-2" data-id="${docSnap.id}" data-action="editar">
           <i class="bi bi-pencil"></i>
@@ -84,13 +112,13 @@ form.addEventListener('submit', async (e) => {
         : selectAsignado.value;
 
     const dispositivo = {
-        nombre: document.getElementById('tipoDispositivo').value.trim(),
+        tipo: document.getElementById('tipoDispositivo').value.trim(),
         marca: document.getElementById('marcaDispositivo').value.trim(),
         modelo: document.getElementById('modeloDispositivo').value.trim(),
         sistemaOperativo: document.getElementById('soDispositivo').value.trim(),
         version: document.getElementById('versionDispositivo').value.trim(),
         asignadoA: asignado || '',
-        estado: document.getElementById('estadoDispositivo').value,
+        estado: document.getElementById('estadoDispositivo').value || 'Disponible',
         updatedAt: serverTimestamp()
     };
 
@@ -119,6 +147,7 @@ form.addEventListener('submit', async (e) => {
 tabla.addEventListener('click', async (e) => {
     const btn = e.target.closest('button');
     if (!btn) return;
+
     const id = btn.dataset.id;
     const action = btn.dataset.action;
 
@@ -131,14 +160,16 @@ tabla.addEventListener('click', async (e) => {
             const data = snap.data();
             editandoId = id;
 
-            document.getElementById('nombreDispositivo').value = data.tipo || '';
+            document.getElementById('tipoDispositivo').value = data.tipo || '';
             document.getElementById('marcaDispositivo').value = data.marca || '';
             document.getElementById('modeloDispositivo').value = data.modelo || '';
             document.getElementById('soDispositivo').value = data.sistemaOperativo || '';
             document.getElementById('versionDispositivo').value = data.version || '';
             document.getElementById('estadoDispositivo').value = data.estado || 'Disponible';
 
-            if (data.asignadoA && !Array.from(selectAsignado.options).some(opt => opt.value === data.asignadoA)) {
+            // --- Asignado ---
+            const existe = Array.from(selectAsignado.options).some(opt => opt.value === data.asignadoA);
+            if (data.asignadoA && !existe) {
                 selectAsignado.value = 'manual';
                 inputManual.classList.remove('d-none');
                 inputManual.value = data.asignadoA;
@@ -183,7 +214,7 @@ document.getElementById('btnExportarExcel').addEventListener('click', async () =
     snapshot.forEach(docSnap => {
         const d = docSnap.data();
         data.push({
-            Nombre: d.nombre || '',
+            Tipo: d.tipo || '',
             Marca: d.marca || '',
             Modelo: d.modelo || '',
             SO: d.sistemaOperativo || '',

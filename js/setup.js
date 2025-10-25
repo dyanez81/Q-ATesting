@@ -1,118 +1,203 @@
-// /js/setupFirestore.js
-import { db } from './firebase-config.js';
+import { db } from "./firebase-config.js";
 import {
   collection,
-  addDoc,
-  setDoc,
+  getDocs,
   doc,
-  serverTimestamp
-} from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
+  deleteDoc,
+  setDoc,
+  serverTimestamp,
+} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
-/**
- * Estructura solicitada:
- * apps -> {appId} (doc con: nombre, tipo, estatus, fechaFin, requerimiento)
- *   modulos (subcol)
- *     -> {moduloId} (doc con: nombre, ambiente, submodulO, fechaInicio)
- *       matrices (subcol)
- *         -> {matrizId} (doc con TODOS los campos listados para matriz)
- *           casos (subcol)
- *             -> {casoId} (doc con campos de caso)
- *               bugs (subcol)
- *                 -> {bugId} (doc con campos de bug)
- */
-
-async function crearEstructuraSegunEsquema() {
-  console.log('⏳ Iniciando creación de estructura…');
-
-  // 1) APP (colección: apps)
-  const appRef = await addDoc(collection(db, 'apps'), {
-    nombre: 'FINSUS QA Suite',
-    tipo: 'web',               // web | movil | api
-    estatus: true,             // boolean
-    fechaFin: serverTimestamp(), // Timestamp
-    requerimiento: 'Validar flujos críticos (login, transferencias, bugs)',
-    createdAt: serverTimestamp()
-  });
-  console.log('🟣 App creada:', appRef.id);
-
-  // 2) MODULO (subcolección: apps/{appId}/modulos)
-  const moduloRef = await addDoc(collection(db, `apps/${appRef.id}/modulos`), {
-    nombre: 'Transferencias',
-    ambiente: 'QA',              // Desarrollo | QA | Producción, etc.
-    submodulo: 'SPEI',           // 👈️ RESPETO tu propiedad escrita como "submodulO"
-    fechaInicio: serverTimestamp(),
-    createdAt: serverTimestamp()
-  });
-  console.log('🔵 Módulo creado:', moduloRef.id);
-
-  // 3) MATRIZ (subcolección: apps/{appId}/modulos/{moduloId}/matrices)
-  //    Aquí coloco TODOS los campos tal como los pediste para matriz.
-  const matrizRef = await addDoc(collection(db, `apps/${appRef.id}/modulos/${moduloRef.id}/matrices`), {
-    // Campos "de matriz" (tal cual tu lista)
-    NombreDelCaso: 'Validar transferencia SPEI exitosa',
-    Descripcion: 'Matriz de pruebas para SPEI con casos positivos/negativos.',
-    Precondiciones: 'Usuario con cuenta activa y saldo suficiente.',
-    Pasos: '1) Capturar datos de transferencia\n2) Confirmar\n3) Validar resultado',
-    TipoDePrueba: 'Funcional',
-    Criterio: true, // boolean
-    ResultadoEsperado: 'Transferencia aplicada y referencia generada.',
-    Tipo: 'End-to-End',
-    Estado: 'Pendiente', // Pendiente | Positivo | Fallo | Bloqueado
-    FechaEjecucion: serverTimestamp(),
-    Comentarios: 'Primera corrida en ambiente QA.',
-    EvidenciaNombre: '',
-    EvidenciaUrl: '',
-    Tester: 'tester@finsus.mx',
-    ReferenciaHU: 'HU-TRX-001',
-    Fecha: serverTimestamp(),
-
-    // Puedes agregar metadatos de matriz también:
-    nombre: 'Matriz SPEI QA',
-    descripcion: 'Cobertura de SPEI para QA',
-    createdAt: serverTimestamp()
-  });
-  console.log('🟢 Matriz creada:', matrizRef.id);
-
-  // 4) CASO de ejemplo (subcolección: apps/{appId}/modulos/{moduloId}/matrices/{matrizId}/casos)
-  const casoRef = await addDoc(collection(db, `apps/${appRef.id}/modulos/${moduloRef.id}/matrices/${matrizRef.id}/casos`), {
-    NombreDelCaso: 'Validar transferencia SPEI exitosa',
-    Descripcion: 'Caso positivo con monto válido y CLABE correcta.',
-    Precondiciones: 'Usuario con sesión iniciada, CLABE destino válida.',
-    Pasos: '1) Ingresar CLABE\n2) Ingresar monto\n3) Confirmar\n4) Verificar éxito',
-    TipoDePrueba: 'Funcional',
-    Criterio: true,
-    ResultadoEsperado: 'Estado “Exitosa” y folio generado.',
-    Tipo: 'Positivo',
-    Estado: 'Positivo', // Pendiente | Positivo | Fallo | Bloqueado
-    FechaEjecucion: serverTimestamp(),
-    Comentarios: 'Se ejecutó con datos reales en QA.',
-    EvidenciaNombre: 'spei_ok.png',
-    EvidenciaUrl: 'https://example.com/spei_ok.png',
-    Tester: 'daniel@finsus.mx',
-    ReferenciaHU: 'HU-123',
-    Fecha: serverTimestamp(),
-    createdAt: serverTimestamp()
-  });
-  console.log('📄 Caso creado:', casoRef.id);
-
-  // 5) BUG de ejemplo (subcolección: apps/{appId}/modulos/{moduloId}/matrices/{matrizId}/casos/{casoId}/bugs)
-  const bugRef = await addDoc(collection(db,
-    `apps/${appRef.id}/modulos/${moduloRef.id}/matrices/${matrizRef.id}/casos/${casoRef.id}/bugs`
-  ), {
-    nombre: 'Error en flujo de registro',
-    descripcion: 'La app se cierra al registrar usuario nuevo',
-    estado: 'Abierto', // Abierto | Corregido | Validado
-    fechaReporte: serverTimestamp(),
-    fechaCorreccion: null,
-    tester: 'UID_TESTER_DEMO',
-    desarrollador: 'UID_DEV_DEMO',
-    evidenciaUrl: '',
-    comentariosTester: 'Pendiente de revisión por dev',
-    createdAt: serverTimestamp()
-  });
-  console.log('🐞 Bug creado:', bugRef.id);
-
-  console.log('✅ Estructura creada correctamente con TODOS los campos solicitados.');
+// 🧹 Eliminar TODAS las apps y sus subniveles
+async function eliminarColeccionRecursiva(coleccionRef) {
+  const snap = await getDocs(coleccionRef);
+  for (const documento of snap.docs) {
+    const subcolecciones = ["modulos", "matrices", "casos", "bugs"];
+    for (const sub of subcolecciones) {
+      const subRef = collection(documento.ref, sub);
+      const subSnap = await getDocs(subRef);
+      if (!subSnap.empty) {
+        await eliminarColeccionRecursiva(subRef);
+      }
+    }
+    await deleteDoc(documento.ref);
+  }
 }
 
-crearEstructuraSegunEsquema();
+// 🚀 Crear datos de ejemplo
+async function crearDatosDemo() {
+  try {
+    console.log("🧹 Eliminando apps existentes...");
+    await eliminarColeccionRecursiva(collection(db, "apps"));
+    console.log("✅ Apps anteriores eliminadas.");
+
+    // ================================
+    // 🔷 APP 1 - Finsus QA
+    // ================================
+    const app1Ref = doc(collection(db, "apps"));
+    await setDoc(app1Ref, {
+      nombre: "Finsus QA",
+      tipo: "Móvil",
+      estatus: true,
+      fechaFin: new Date("2025-12-31"),
+      requerimiento: "Validación de transferencias SPEI",
+      tester: "daniel@finsus.mx",
+      testerNombre: "Daniel Yañez",
+      testerUid: "uid_tester_001",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+
+    // --- Módulo 1 ---
+    const mod1Ref = doc(collection(app1Ref, "modulos"));
+    await setDoc(mod1Ref, {
+      nombre: "Transferencias",
+      ambiente: "QA",
+      submodulo: "SPEI",
+      fechaInicio: new Date("2025-10-15"),
+    });
+
+    // --- Matriz 1.1 ---
+    const mat1Ref = doc(collection(mod1Ref, "matrices"));
+    await setDoc(mat1Ref, {
+      nombre: "Matriz SPEI QA",
+      descripcion: "Cobertura funcional del flujo SPEI.",
+      ambiente: "QA",
+      createdAt: serverTimestamp(),
+    });
+
+    const caso1Ref = doc(collection(mat1Ref, "casos"));
+    await setDoc(caso1Ref, {
+      NombreDelCaso: "Validar transferencia SPEI exitosa",
+      Descripcion: "Verifica procesamiento correcto de transferencia SPEI.",
+      TipoDePrueba: "Funcional",
+      Estado: "Positivo",
+      Tester: "daniel@finsus.mx",
+      ReferenciaHU: "HU-TRX-001",
+      createdAt: serverTimestamp(),
+    });
+
+    await setDoc(doc(collection(caso1Ref, "bugs")), {
+      nombre: "Error menor en validación de monto",
+      descripcion: "El monto se muestra con un decimal adicional.",
+      estado: "Abierto",
+      tester: "uid_tester_001",
+      desarrollador: "uid_dev_001",
+      evidenciaUrl: "https://storage.googleapis.com/finsus-bucket/bugs/monto.png",
+      comentariosTester: "No afecta el flujo principal.",
+      fechaReporte: serverTimestamp(),
+    });
+
+    const caso2Ref = doc(collection(mat1Ref, "casos"));
+    await setDoc(caso2Ref, {
+      NombreDelCaso: "Validar SPEI con CLABE inválida",
+      Descripcion: "Debe mostrar error al ingresar CLABE errónea.",
+      TipoDePrueba: "Negativa",
+      Estado: "Fallo",
+      Tester: "tester@finsus.mx",
+      ReferenciaHU: "HU-TRX-002",
+      createdAt: serverTimestamp(),
+    });
+
+    await setDoc(doc(collection(caso2Ref, "bugs")), {
+      nombre: "Validación CLABE fallida",
+      descripcion: "No se muestra mensaje de error con CLABE incorrecta.",
+      estado: "Abierto",
+      tester: "uid_tester_002",
+      desarrollador: "uid_dev_002",
+      evidenciaUrl: "https://storage.googleapis.com/finsus-bucket/bugs/clabe.png",
+      comentariosTester: "Pendiente de revisión backend.",
+      fechaReporte: serverTimestamp(),
+    });
+
+    // --- Matriz 1.2 ---
+    const mat2Ref = doc(collection(mod1Ref, "matrices"));
+    await setDoc(mat2Ref, {
+      nombre: "Matriz SPEI Negativa",
+      descripcion: "Validación de límites de monto.",
+      ambiente: "QA",
+      createdAt: serverTimestamp(),
+    });
+
+    const caso3Ref = doc(collection(mat2Ref, "casos"));
+    await setDoc(caso3Ref, {
+      NombreDelCaso: "Validar SPEI con monto excedido",
+      TipoDePrueba: "Negativa",
+      Estado: "Pendiente",
+      Tester: "qa@finsus.mx",
+      ReferenciaHU: "HU-TRX-003",
+      createdAt: serverTimestamp(),
+    });
+
+    await setDoc(doc(collection(caso3Ref, "bugs")), {
+      nombre: "Validación de monto no aplicada",
+      descripcion: "Permite monto superior al límite.",
+      estado: "Abierto",
+      tester: "uid_tester_003",
+      desarrollador: "uid_dev_004",
+      evidenciaUrl: "https://storage.googleapis.com/finsus-bucket/bugs/monto_limite.png",
+      comentariosTester: "Requiere control en backend.",
+      fechaReporte: serverTimestamp(),
+    });
+
+    // ================================
+    // 🔶 APP 2 - Finsus Créditos
+    // ================================
+    const app2Ref = doc(collection(db, "apps"));
+    await setDoc(app2Ref, {
+      nombre: "Finsus Créditos",
+      tipo: "Web",
+      estatus: true,
+      fechaFin: new Date("2025-11-30"),
+      requerimiento: "Validación del flujo de solicitud de crédito",
+      tester: "luis@finsus.mx",
+      testerNombre: "Luis García",
+      testerUid: "uid_tester_002",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+
+    const mod2Ref = doc(collection(app2Ref, "modulos"));
+    await setDoc(mod2Ref, {
+      nombre: "Créditos",
+      ambiente: "QA",
+      submodulo: "Tarjetas",
+      fechaInicio: new Date("2025-09-10"),
+    });
+
+    const mat3Ref = doc(collection(mod2Ref, "matrices"));
+    await setDoc(mat3Ref, {
+      nombre: "Matriz Créditos QA",
+      descripcion: "Casos de prueba para tarjetas de crédito.",
+      ambiente: "QA",
+      createdAt: serverTimestamp(),
+    });
+
+    const caso4Ref = doc(collection(mat3Ref, "casos"));
+    await setDoc(caso4Ref, {
+      NombreDelCaso: "Solicitud de tarjeta básica",
+      TipoDePrueba: "Funcional",
+      Estado: "Positivo",
+      Tester: "luis@finsus.mx",
+      ReferenciaHU: "HU-CRD-001",
+      createdAt: serverTimestamp(),
+    });
+
+    await setDoc(doc(collection(caso4Ref, "bugs")), {
+      nombre: "Error en dirección de usuario",
+      descripcion: "Dirección incompleta al crear solicitud.",
+      estado: "Abierto",
+      tester: "uid_tester_004",
+      desarrollador: "uid_dev_005",
+      evidenciaUrl: "https://storage.googleapis.com/finsus-bucket/bugs/credit_address.png",
+      comentariosTester: "Detectado en etapa de QA.",
+      fechaReporte: serverTimestamp(),
+    });
+
+    console.log("✅ Datos demo creados correctamente en Firestore jerárquico (apps/modulos/matrices/casos/bugs)");
+  } catch (err) {
+    console.error("❌ Error creando datos de demo:", err);
+  }
+}
+
+crearDatosDemo();

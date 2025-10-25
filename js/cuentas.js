@@ -98,11 +98,18 @@ function generarDatos() {
     const fecha = new Date();
     const dd = String(fecha.getDate()).padStart(2, '0');
     const mm = String(fecha.getMonth() + 1).padStart(2, '0');
-    const yyyy = fecha.getFullYear();
-    const consecutivo = '00';
+    const min = String(fecha.getMinutes()).padStart(2);
+    const yy = String(fecha.getFullYear());
+    const consecutivoCorreo = ''
+    function getRandomIntInclusive(min, max) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min + 1) + min);
+    }
+    const consecutivo = getRandomIntInclusive(10, 99);
 
-    const telefono = `${dd}${mm}${yyyy}${consecutivo}`;
-    const correo = `pruebasqafin+${telefono}@gmail.com`;
+    const telefono = `${dd}${mm}${yy.slice(-2)}${min}${consecutivo}`;
+    const correo = `pruebasqafin+${consecutivoCorreo}@gmail.com`;
 
     document.getElementById('telefonoCuenta').value = telefono;
     document.getElementById('correoCuenta').value = correo;
