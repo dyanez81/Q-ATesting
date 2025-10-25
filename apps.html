@@ -2,103 +2,134 @@
 <html lang="es">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Aplicaciones - QA Finsus</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Aplicaciones - QA Finsus</title>
 
-    <link rel="stylesheet" href="vendor/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="vendor/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body>
-    <div class="main-content">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>Gestión de Aplicaciones</h2>
-            <button class="btn btn-primary" id="btnNuevaApp" data-bs-toggle="modal" data-bs-target="#modalApp">
-                <i class="bi bi-plus-lg"></i> Nueva App
-            </button>
-        </div>
-
-        <!-- Tabla de Apps -->
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle" id="tablaApps">
-                        <thead class="table-light">
-                            <tr>
-                                <th>#</th>
-                                <th>Nombre</th>
-                                <th>Tipo</th>
-                                <th>Tester Asignado</th>
-                                <th>Requerimiento</th>
-                                <th>Fecha Fin</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+  <div class="main-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2>Gestión de Aplicaciones</h2>
+      <button class="btn btn-primary" id="btnNuevaApp" data-bs-toggle="modal" data-bs-target="#modalApp">
+        <i class="bi bi-plus-lg"></i> Nueva App
+      </button>
     </div>
 
-    <!-- Modal Crear/Editar App -->
-    <div class="modal fade" id="modalApp" tabindex="-1" aria-labelledby="modalAppLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalAppLabel">Registrar Aplicación</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="formApp" class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Nombre de la App</label>
-                            <input type="text" class="form-control" id="nombreApp" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Tipo</label>
-                            <select class="form-control" id="tipoApp" required>
-                                <option value="">Seleccionar</option>
-                                <option value="Web">Web</option>
-                                <option value="Móvil">Móvil</option>
-                                <option value="API">API</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Tester Asignado</label>
-                            <select id="testerApp" class="form-control" required></select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Requerimiento</label>
-                            <input type="text" class="form-control" id="requerimientoApp">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Fecha de Finalización</label>
-                            <input type="date" class="form-control" id="fechaFinApp">
-                        </div>
-                        <div class="col-12 text-end mt-3">
-                            <button type="submit" class="btn btn-primary w-100">Guardar</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+    <!-- Tabla de Apps -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle" id="tablaApps">
+            <thead class="table-light">
+              <tr>
+                <th>#</th>
+                <th>Nombre App</th>
+                <th>Tipo</th>
+                <th>Tester Asignado</th>
+                <th>Requerimiento</th>
+                <th>Fecha Fin</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
         </div>
+      </div>
     </div>
+  </div>
 
-    <!-- Scripts -->
-    <script type="module">
-        import { loadNavbar } from './js/ui.js';
-        loadNavbar();
-    </script>
+  <!-- Modal Crear/Editar App -->
+  <div class="modal fade" id="modalApp" tabindex="-1" aria-labelledby="modalAppLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content border-0 shadow-sm">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="modalAppLabel">Registrar Aplicación</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formApp" class="row g-3 needs-validation" novalidate>
+            <div class="col-md-6">
+              <label class="form-label">Nombre de la App</label>
+              <input type="text" class="form-control" id="nombreApp" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Tipo</label>
+              <select class="form-control" id="tipoApp" required>
+                <option value="">Seleccionar</option>
+                <option value="Web">Web</option>
+                <option value="Móvil">Móvil</option>
+                <option value="API">API</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Tester Asignado</label>
+              <select id="testerApp" class="form-control" required>
+                <!-- apps.js llenará esta lista -->
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Requerimiento</label>
+              <input type="text" class="form-control" id="requerimientoApp">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Fecha de Finalización</label>
+              <input type="date" class="form-control" id="fechaFinApp">
+            </div>
+            <div class="col-12 text-end mt-3">
+              <button type="submit" class="btn btn-primary w-100">
+                <i class="bi bi-check-circle me-1"></i> Guardar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    <script type="module" src="./js/firebase-config.js"></script>
-    <script type="module" src="./js/auth.js"></script>
-    <script type="module" src="./js/ui.js"></script>
-    <script type="module" src="./js/apps.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Scripts -->
+  <script type="module">
+    import { loadNavbar } from './js/ui.js';
+    import { logout } from './js/auth.js';
+
+    await loadNavbar();
+    window.logout = logout;
+
+    // 🔹 Título dinámico y limpieza del modal
+    const modalEl = document.getElementById('modalApp');
+    const modalTitle = document.getElementById('modalAppLabel');
+    const form = document.getElementById('formApp');
+    const btnNueva = document.getElementById('btnNuevaApp');
+
+    // Cuando se abre desde "Nueva App"
+    modalEl.addEventListener('show.bs.modal', (ev) => {
+      if (ev.relatedTarget === btnNueva) {
+        modalTitle.textContent = 'Registrar Aplicación';
+        form.reset();
+      }
+    });
+
+    // Limpieza al cerrar
+    modalEl.addEventListener('hidden.bs.modal', () => {
+      modalTitle.textContent = 'Registrar Aplicación';
+      form.reset();
+    });
+
+    // Permite que apps.js cambie el título a "Editar Aplicación"
+    window.setTituloEditarApp = () => {
+      modalTitle.textContent = 'Editar Aplicación';
+    };
+  </script>
+
+  <script type="module" src="./js/firebase-config.js"></script>
+  <script type="module" src="./js/auth.js"></script>
+  <script type="module" src="./js/ui.js"></script>
+  <script type="module" src="./js/apps.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-
 </html>

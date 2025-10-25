@@ -1,153 +1,204 @@
-import { auth, db } from './firebase-config.js';
+// /js/apps.js
+import { db, auth } from './firebase-config.js';
 import {
     collection,
-    getDocs,
     addDoc,
+    getDocs,
     updateDoc,
+    deleteDoc,
     doc,
-    getDoc
+    onSnapshot,
+    getDoc,
+    serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
 
-// Elementos
+const form = document.getElementById('formApp');
 const tabla = document.querySelector('#tablaApps tbody');
-const formApp = document.getElementById('formApp');
-const modalApp = document.getElementById('modalApp');
 const modalEl = document.getElementById('modalApp');
+const modal = new bootstrap.Modal(modalEl);
 const testerSelect = document.getElementById('testerApp');
-let apps = [];
-let editId = null;
+let editandoId = null;
 
-// --- Cargar testers ---
+// --- 🔹 Cargar testers ---
 async function cargarTesters() {
-    const usersRef = collection(db, 'users');
-    const snapshot = await getDocs(usersRef);
     testerSelect.innerHTML = '<option value="">Seleccionar Tester</option>';
 
-    snapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        if (data.role === 'Tester') {
+    try {
+        const usersRef = collection(db, 'users');
+        const snapshot = await getDocs(usersRef);
+
+        snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            if (
+                data.role?.toLowerCase() === 'tester' ||
+                data.isTester === true ||
+                data.role === 'QA'
+            ) {
+                const opt = document.createElement('option');
+                opt.value = data.email || docSnap.id;
+                opt.textContent = data.name || data.email || '(Sin nombre)';
+                opt.dataset.uid = docSnap.id;
+                testerSelect.appendChild(opt);
+            }
+        });
+
+        if (testerSelect.options.length === 1) {
             const opt = document.createElement('option');
-            opt.value = docSnap.id;
-            opt.textContent = data.name || data.email;
+            opt.disabled = true;
+            opt.textContent = '⚠️ No hay testers registrados';
             testerSelect.appendChild(opt);
         }
-    });
-}
-
-// --- Cargar Apps ---
-async function cargarApps() {
-    const appsRef = collection(db, 'apps');
-    const snapshot = await getDocs(appsRef);
-    apps = [];
-    tabla.innerHTML = '';
-
-    let index = 1;
-    snapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        apps.push({ id: docSnap.id, ...data });
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-      <td>${index++}</td>
-      <td>${data.nombre || ''}</td>
-      <td>${data.tipo || ''}</td>
-      <td>${data.testerNombre || ''}</td>
-      <td>${data.requerimiento || ''}</td>
-      <td>${data.fechaFin || ''}</td>
-      <td>
-        <button class="btn btn-sm btn-outline-primary me-1" data-id="${docSnap.id}" data-action="edit">
-          <i class="bi bi-pencil"></i>
-        </button>
-      </td>
-    `;
-        tabla.appendChild(tr);
-    });
-}
-
-// --- Guardar App ---
-formApp.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const nombre = document.getElementById('nombreApp').value.trim();
-    const tipo = document.getElementById('tipoApp').value;
-    const tester = document.getElementById('testerApp').value;
-    const requerimiento = document.getElementById('requerimientoApp').value.trim();
-    const fechaFin = document.getElementById('fechaFinApp').value;
-
-    if (!nombre || !tipo || !tester) {
-        Swal.fire('Error', 'Por favor completa los campos obligatorios.', 'error');
-        return;
+    } catch (err) {
+        console.error('❌ Error cargando testers:', err);
     }
+}
 
-    const testerDoc = await getDoc(doc(db, 'users', tester));
-    const testerNombre = testerDoc.exists() ? (testerDoc.data().name || testerDoc.data().email) : '';
+// --- 🔹 Cargar Apps en tiempo real ---
+function cargarApps() {
+    tabla.innerHTML = `
+    <tr><td colspan="7" class="text-center text-muted py-3">Cargando...</td></tr>
+  `;
 
-    try {
-        if (editId) {
-            const ref = doc(db, 'apps', editId);
-            await updateDoc(ref, { nombre, tipo, tester, testerNombre, requerimiento, fechaFin });
-            Swal.fire('Actualizado', 'La aplicación se actualizó correctamente.', 'success');
-        } else {
-            await addDoc(collection(db, 'apps'), { nombre, tipo, tester, testerNombre, requerimiento, fechaFin });
-            Swal.fire('Guardado', 'La aplicación se registró correctamente.', 'success');
+    onSnapshot(collection(db, 'apps'), (snapshot) => {
+        tabla.innerHTML = '';
+
+        if (snapshot.empty) {
+            tabla.innerHTML = `
+        <tr><td colspan="7" class="text-center text-muted py-3">No hay aplicaciones registradas</td></tr>
+      `;
+            return;
         }
 
-        document.getElementById('modalApp').querySelector('.btn-close').click();
-        formApp.reset();
-        editId = null;
-        cargarApps();
-    } catch (err) {
-        console.error('Error al guardar app:', err);
+        let i = 1;
+        snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+        <td>${i++}</td>
+        <td>${data.nombre || '-'}</td>
+        <td>${data.tipo || '-'}</td>
+        <td>${data.testerNombre || data.tester || '-'}</td>
+        <td>${data.requerimiento || '-'}</td>
+        <td>${data.fechaFin ? new Date(data.fechaFin.toDate()).toLocaleDateString() : '-'}</td>
+        <td class="text-center">
+          <button class="btn btn-sm btn-outline-primary me-2" data-id="${docSnap.id}" data-action="editar">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-danger" data-id="${docSnap.id}" data-action="eliminar">
+            <i class="bi bi-trash"></i>
+          </button>
+        </td>
+      `;
+            tabla.appendChild(tr);
+        });
+    });
+}
+
+// --- 🔹 Guardar / editar App ---
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const sel = testerSelect.selectedOptions[0];
+    const testerEmail = sel?.value || '';
+    const testerNombre = sel?.textContent || '';
+    const testerUid = sel?.dataset.uid || '';
+
+    const nuevaApp = {
+        nombre: document.getElementById('nombreApp').value.trim(),
+        tipo: document.getElementById('tipoApp').value.trim(),
+        tester: testerEmail,
+        testerNombre,
+        testerUid,
+        requerimiento: document.getElementById('requerimientoApp').value.trim(),
+        fechaFin: document.getElementById('fechaFinApp').value
+            ? new Date(document.getElementById('fechaFinApp').value)
+            : null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+    };
+
+    try {
+        if (editandoId) {
+            await updateDoc(doc(db, 'apps', editandoId), nuevaApp);
+            Swal.fire('Actualizado', 'Aplicación modificada correctamente.', 'success');
+        } else {
+            await addDoc(collection(db, 'apps'), nuevaApp);
+            Swal.fire('Registrado', 'Aplicación creada correctamente.', 'success');
+        }
+
+        form.reset();
+        editandoId = null;
+        modal.hide();
+    } catch (error) {
+        console.error('❌ Error guardando app:', error);
         Swal.fire('Error', 'No se pudo guardar la aplicación.', 'error');
     }
 });
 
-// --- Detectar edición ---
-tabla.addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-action="edit"]');
+// --- 🔹 Editar / Eliminar ---
+tabla.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button');
     if (!btn) return;
+    const id = btn.dataset.id;
+    const action = btn.dataset.action;
 
-    const id = btn.getAttribute('data-id');
-    const app = apps.find(a => a.id === id);
-    if (!app) return;
+    if (action === 'editar') {
+        try {
+            const ref = doc(db, 'apps', id);
+            const snap = await getDoc(ref);
+            if (snap.exists()) {
+                const data = snap.data();
+                document.getElementById('nombreApp').value = data.nombre || '';
+                document.getElementById('tipoApp').value = data.tipo || '';
+                await cargarTesters(); // asegurar que el combo esté actualizado
+                testerSelect.value = data.tester || '';
+                document.getElementById('requerimientoApp').value = data.requerimiento || '';
+                document.getElementById('fechaFinApp').value = data.fechaFin
+                    ? new Date(data.fechaFin.toDate()).toISOString().split('T')[0]
+                    : '';
+                editandoId = id;
+                modal.show();
+            }
+        } catch (error) {
+            console.error('❌ Error al editar app:', error);
+        }
+    }
 
-    editId = id;
-    document.getElementById('nombreApp').value = app.nombre || '';
-    document.getElementById('tipoApp').value = app.tipo || '';
-    document.getElementById('testerApp').value = app.tester || '';
-    document.getElementById('requerimientoApp').value = app.requerimiento || '';
-    document.getElementById('fechaFinApp').value = app.fechaFin || '';
+    if (action === 'eliminar') {
+        const conf = await Swal.fire({
+            icon: 'warning',
+            title: '¿Eliminar aplicación?',
+            text: 'Esta acción no se puede deshacer.',
+            showCancelButton: true,
+            confirmButtonText: 'Eliminar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#d33'
+        });
 
-    const modal = new bootstrap.Modal(document.getElementById('modalApp'));
-    modal.show();
-});
-// 🧩 Resetear modal cuando se abre para nuevo usuario
-modalEl.addEventListener('show.bs.modal', () => {
-    if (!editando) {
-        modalTitle.textContent = 'Registrar Aplicación';
-        formApp.reset();
+        if (conf.isConfirmed) {
+            await deleteDoc(doc(db, 'apps', id));
+            Swal.fire('Eliminada', 'Aplicación borrada correctamente.', 'success');
+        }
     }
 });
 
-// 🧩 Limpiar formulario al cerrar el modal
-modalEl.addEventListener('hidden.bs.modal', () => {
-    formApp.reset();
-    modalTitle.textContent = 'Registrar Aplicación';
-    editando = null;
+// --- 🔹 Refrescar testers cada vez que se abre el modal ---
+modalEl.addEventListener('show.bs.modal', async () => {
+    await cargarTesters();
 });
 
-
-// --- Validar sesión ---
+// --- 🔹 Inicializar ---
 onAuthStateChanged(auth, async (user) => {
     if (!user) {
         Swal.fire({
             icon: 'warning',
             title: 'Sesión expirada',
-            text: 'Por favor inicia sesión nuevamente.',
+            text: 'Por favor, inicia sesión nuevamente.',
             confirmButtonColor: '#23223F'
-        }).then(() => window.location.href = 'index.html');
+        }).then(() => (window.location.href = 'index.html'));
     } else {
-        await cargarTesters();
-        await cargarApps();
+        cargarApps();
+        cargarTesters();
     }
 });

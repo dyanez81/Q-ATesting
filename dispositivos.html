@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Dispositivos - QA Finsus</title>
+
+    <link rel="stylesheet" href="vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body>
+    <div class="main-content">
+        <!-- Encabezado -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Gestión de Dispositivos</h2>
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" id="btnNuevo" data-bs-toggle="modal" data-bs-target="#modalDispositivo">
+                    <i class="bi bi-plus-lg"></i> Nuevo Dispositivo
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="tablaDispositivos">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Tipo</th>
+                                <th>Marca</th>
+                                <th>Modelo</th>
+                                <th>SO</th>
+                                <th>Versión</th>
+                                <th>Asignado A</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="d-flex gap-2 justify-content-end">
+                    <button id="btnExportarExcel" class="btn btn-outline-success">
+                        <i class="bi bi-file-earmark-excel"></i> Exportar a Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Crear/Editar -->
+    <div class="modal fade" id="modalDispositivo" tabindex="-1" aria-labelledby="modalDispositivoLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalDispositivoLabel">Registrar Dispositivo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formDispositivo" class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Tipo de Dispositivo</label>
+                            <select id="tipoDispositivo" class="form-control" required>
+                                <option value="">Seleccionar tipo...</option>
+                                <option value="Smartphone">Smartphone</option>
+                                <option value="Tablet">Tablet</option>
+                                <option value="iPhone">iPhone</option>
+                                <option value="iPad">iPad</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Marca</label>
+                            <input type="text" class="form-control" id="marcaDispositivo"
+                                placeholder="Ej. Samsung, Apple, Xiaomi">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Modelo</label>
+                            <input type="text" class="form-control" id="modeloDispositivo"
+                                placeholder="Ej. Galaxy S21, iPad Pro">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Sistema Operativo</label>
+                            <input type="text" class="form-control" id="soDispositivo" placeholder="Ej. Android, iOS">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Versión</label>
+                            <input type="text" class="form-control" id="versionDispositivo"
+                                placeholder="Ej. 14.4, 13.0">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Asignado a</label>
+                            <select id="asignadoA" class="form-control">
+                                <option value="">Seleccionar usuario...</option>
+                                <option value="manual">Otro (escribir manualmente)</option>
+                            </select>
+                            <input type="text" id="asignadoManual" class="form-control mt-2 d-none"
+                                placeholder="Nombre manual">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Estado</label>
+                            <select id="estadoDispositivo" class="form-control">
+                                <option value="Disponible">Disponible</option>
+                                <option value="Asignado">Asignado</option>
+                                <option value="En reparación">En reparación</option>
+                            </select>
+                        </div>
+                        <div class="col-12 text-end mt-3">
+                            <button type="submit" class="btn btn-primary w-100">Guardar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { loadNavbar } from './js/ui.js';
+        loadNavbar();
+    </script>
+
+    <script type="module" src="./js/dispositivos.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

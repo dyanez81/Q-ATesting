@@ -1,3 +1,4 @@
+// /js/matrices.js
 import { db, auth } from './firebase-config.js';
 import {
     collection,
@@ -11,18 +12,19 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
 
-
-
-const tabla = document.getElementById('tablaMatrices');
+// --- Referencias DOM ---
 const form = document.getElementById('formMatriz');
-const modal = new bootstrap.Modal(document.getElementById('modalMatriz'));
 const modalEl = document.getElementById('modalMatriz');
+const modal = new bootstrap.Modal(modalEl);
 const appSelect = document.getElementById('appRelacionada');
+const tabla = document.querySelector('#tablaMatrices tbody');
+const btnRecargar = document.getElementById('btnRecargar'); // 🔄 nuevo botón
 let editandoId = null;
 let appsCache = [];
 
-// --- Verificar sesión ---
+// Autenticación
 onAuthStateChanged(auth, async (user) => {
+    
     if (!user) {
         Swal.fire({
             icon: 'warning',
@@ -31,67 +33,116 @@ onAuthStateChanged(auth, async (user) => {
             confirmButtonColor: '#23223F'
         }).then(() => (window.location.href = 'index.html'));
     } else {
-        await cargarAppsRelacionadas();
-        await cargarMatrices();
+        await cargarAppsRelacionadas();   // ← aquí
     }
 });
 
-// --- Cargar lista de apps para relacionar ---
+// Botón "Recargar"
+document.getElementById('btnRecargar')?.addEventListener('click', async () => {
+    await cargarAppsRelacionadas();     // ← y aquí
+    Swal.fire({ icon: 'success', title: 'Actualizado', timer: 1200, showConfirmButton: false });
+});
+
+// --- Cargar apps y módulos (solo bajo demanda) ---
+
 async function cargarAppsRelacionadas() {
     try {
-        const snapshot = await getDocs(collection(db, 'apps'));
-        appsCache = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        if (!appSelect) return;
 
+        // Limpia combo y cache
+        appSelect.innerHTML = '<option value="">Cargando aplicaciones...</option>';
+        appsCache = [];
+
+        // 1) Lee todas las apps una sola vez
+        const appsSnap = await getDocs(collection(db, 'apps'));
+
+        // 2) Para cada app, lee sus módulos
+        const promises = appsSnap.docs.map(async (appDoc) => {
+            const appData = appDoc.data();
+            const modSnap = await getDocs(collection(db, `apps/${appDoc.id}/modulos`));
+
+            const modulos = modSnap.docs.map((m) => ({
+                id: m.id,
+                ...m.data(),
+                appId: appDoc.id,
+                appNombre: appData.nombre || 'Sin nombre'
+            }));
+
+            appsCache.push(...modulos);
+        });
+
+        await Promise.all(promises);
+
+        // 3) Rellena el combo
         appSelect.innerHTML = '<option value="">Seleccionar aplicación...</option>';
-        appsCache.forEach((a) => {
+        appsCache.forEach((m) => {
             const opt = document.createElement('option');
-            opt.value = a.id;
-            opt.textContent = a.nombre || 'App sin nombre';
+            opt.value = `${m.appId}|${m.id}`;
+            opt.textContent = `${m.appNombre} / ${m.nombre || 'Sin módulo'}`;
             appSelect.appendChild(opt);
         });
-    } catch (error) {
-        console.error('Error al cargar apps relacionadas:', error);
+
+        // 4) Carga la tabla
+        cargarMatrices();
+
+    } catch (err) {
+        console.error('❌ Error al cargar apps relacionadas:', err);
+        Swal.fire('Error', 'No se pudieron cargar las aplicaciones.', 'error');
     }
 }
 
+
 // --- Cargar matrices ---
 async function cargarMatrices() {
-    tabla.innerHTML =
-        '<tr><td colspan="8" class="text-center text-muted py-4">Cargando...</td></tr>';
+    if (!tabla) return;
+    tabla.innerHTML = `
+    <tr><td colspan="8" class="text-center text-muted py-4">Cargando matrices...</td></tr>
+  `;
 
     try {
-        const snapshot = await getDocs(collection(db, 'matrices'));
+        const matrices = [];
 
-        if (snapshot.empty) {
-            tabla.innerHTML =
-                '<tr><td colspan="8" class="text-center text-muted py-4">No hay matrices registradas</td></tr>';
+        for (const mod of appsCache) {
+            const matsSnap = await getDocs(collection(db, `apps/${mod.appId}/modulos/${mod.id}/matrices`));
+            matsSnap.forEach((d) => {
+                matrices.push({
+                    id: d.id,
+                    ...d.data(),
+                    appId: mod.appId,
+                    appNombre: mod.appNombre,
+                    modulo: mod.nombre
+                });
+            });
+        }
+
+        if (!matrices.length) {
+            tabla.innerHTML = `
+        <tr><td colspan="8" class="text-center text-muted py-4">No hay matrices registradas</td></tr>
+      `;
             return;
         }
 
-        const matrices = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
         matrices.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
         let html = '';
         let i = 1;
         matrices.forEach((m) => {
-            const app = appsCache.find((a) => a.id === m.appId);
             html += `
         <tr>
           <td>${i++}</td>
-          <td>${m.nombre}</td>
-          <td>${app ? app.nombre : 'Sin App'}</td>
-          <td>${m.descripcion}</td>
-          <td>${m.ambiente}</td>
-          <td>${m.modulo}</td>
-          <td>${m.submodulo || '-'}</td>
+          <td>${m.nombre || '-'}</td>
+          <td>${m.appNombre || '-'}</td>
+          <td>${m.modulo || '-'}</td>
+          <td>${m.descripcion || '-'}</td>
+          <td>${m.ambiente || '-'}</td>
           <td class="text-center">
-            <a href="casos.html?id=${m.id}" class="btn btn-sm btn-outline-info me-2">
+            <a href="casos.html?id=${m.id}&app=${m.appId}&modulo=${m.modulo}" class="btn btn-sm btn-outline-info me-2">
               <i class="bi bi-list-check"></i> Casos
             </a>
-            <button class="btn btn-sm btn-outline-primary me-2" data-id="${m.id}" data-action="editar">
+            <button class="btn btn-sm btn-outline-primary me-2" data-id="${m.id}" data-app="${m.appId}" data-modulo="${m.modulo}" data-action="editar">
               <i class="bi bi-pencil"></i>
             </button>
-            <button class="btn btn-sm btn-outline-danger" data-id="${m.id}" data-action="eliminar">
+            <button class="btn btn-sm btn-outline-danger" data-id="${m.id}" data-app="${m.appId}" data-modulo="${m.modulo}" data-action="eliminar">
               <i class="bi bi-trash"></i>
             </button>
           </td>
@@ -106,28 +157,33 @@ async function cargarMatrices() {
     }
 }
 
-// --- Guardar o editar matriz ---
-form.addEventListener('submit', async (e) => {
+// --- Guardar / editar ---
+form?.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    const [appId, moduloId] = appSelect.value.split('|');
+    if (!appId || !moduloId) {
+        Swal.fire('Error', 'Selecciona una aplicación y módulo.', 'warning');
+        return;
+    }
 
     const nuevaMatriz = {
         nombre: document.getElementById('nombreMatriz').value.trim(),
         descripcion: document.getElementById('descripcionMatriz').value.trim(),
         ambiente: document.getElementById('ambienteMatriz').value,
-        modulo: document.getElementById('moduloMatriz').value.trim(),
         submodulo: document.getElementById('submoduloMatriz').value.trim(),
-        appId: appSelect.value,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
     };
 
     try {
+        const path = `apps/${appId}/modulos/${moduloId}/matrices`;
+
         if (editandoId) {
-            const ref = doc(db, 'matrices', editandoId);
-            await updateDoc(ref, nuevaMatriz);
+            await updateDoc(doc(db, path, editandoId), nuevaMatriz);
             Swal.fire('Actualizado', 'La matriz se actualizó correctamente.', 'success');
         } else {
-            await addDoc(collection(db, 'matrices'), nuevaMatriz);
+            await addDoc(collection(db, path), nuevaMatriz);
             Swal.fire('Registrado', 'La matriz se agregó correctamente.', 'success');
         }
 
@@ -141,74 +197,78 @@ form.addEventListener('submit', async (e) => {
     }
 });
 
-// --- Editar o eliminar ---
-tabla.addEventListener('click', async (e) => {
+// --- Limpiar modal ---
+modalEl?.addEventListener('hidden.bs.modal', () => {
+    form.reset();
+    editandoId = null;
+});
+
+// --- Delegación de eventos (editar/eliminar) ---
+tabla?.addEventListener('click', async (e) => {
     const btn = e.target.closest('button');
     if (!btn) return;
 
     const id = btn.dataset.id;
+    const appId = btn.dataset.app;
+    const modulo = btn.dataset.modulo;
     const action = btn.dataset.action;
 
     if (action === 'editar') {
-        const ref = doc(db, 'matrices', id);
-        const snap = await getDoc(ref);
-        if (!snap.exists()) return Swal.fire('Error', 'No se encontró la matriz.', 'error');
+        try {
+            const matrizRef = doc(db, `apps/${appId}/modulos/${modulo}/matrices/${id}`);
+            const snap = await getDoc(matrizRef);
 
-        const matriz = snap.data();
+            if (!snap.exists()) {
+                Swal.fire('Error', 'No se encontró la matriz en Firestore.', 'error');
+                return;
+            }
 
-        document.getElementById('nombreMatriz').value = matriz.nombre;
-        document.getElementById('descripcionMatriz').value = matriz.descripcion;
-        document.getElementById('ambienteMatriz').value = matriz.ambiente;
-        document.getElementById('moduloMatriz').value = matriz.modulo;
-        document.getElementById('submoduloMatriz').value = matriz.submodulo || '';
-        appSelect.value = matriz.appId || '';
+            const data = snap.data();
+            editandoId = id;
 
-        editandoId = id;
-        document.getElementById('modalMatrizLabel').textContent = 'Editar Matriz';
-        modal.show();
+            document.getElementById('nombreMatriz').value = data.nombre || '';
+            document.getElementById('descripcionMatriz').value = data.descripcion || '';
+            document.getElementById('ambienteMatriz').value = data.ambiente || '';
+            document.getElementById('submoduloMatriz').value = data.submodulo || '';
+
+            modal.show();
+        } catch (err) {
+            console.error('❌ Error al cargar matriz para edición:', err);
+            Swal.fire('Error', 'No se pudo cargar la matriz para editar.', 'error');
+        }
     }
 
     if (action === 'eliminar') {
-        const confirmar = await Swal.fire({
+        const confirm = await Swal.fire({
             icon: 'warning',
             title: '¿Eliminar matriz?',
-            text: 'También se eliminarán sus casos asociados.',
+            text: 'Esta acción no se puede deshacer.',
             showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Eliminar todo'
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
         });
 
-        if (confirmar.isConfirmed) {
-            try {
-                const casosSnapshot = await getDocs(collection(db, `matrices/${id}/casos`));
-                const eliminaciones = casosSnapshot.docs.map((c) =>
-                    deleteDoc(doc(db, `matrices/${id}/casos/${c.id}`))
-                );
-                await Promise.all(eliminaciones);
+        if (!confirm.isConfirmed) return;
 
-                await deleteDoc(doc(db, 'matrices', id));
-
-                Swal.fire('Eliminada', 'La matriz y sus casos fueron eliminados.', 'success');
-                cargarMatrices();
-            } catch (error) {
-                console.error('Error al eliminar matriz:', error);
-                Swal.fire('Error', 'No se pudo eliminar la matriz.', 'error');
-            }
+        try {
+            await deleteDoc(doc(db, `apps/${appId}/modulos/${modulo}/matrices/${id}`));
+            Swal.fire('Eliminado', 'La matriz fue eliminada correctamente.', 'success');
+            cargarMatrices();
+        } catch (err) {
+            console.error('❌ Error al eliminar matriz:', err);
+            Swal.fire('Error', 'No se pudo eliminar la matriz.', 'error');
         }
     }
 });
-// 🧩 Resetear modal cuando se abre para nuevo usuario
-modalEl.addEventListener('show.bs.modal', () => {
-    if (!editando) {
-        modalTitle.textContent = 'Agregar Matriz';
-        form.reset();
-    }
-});
 
-// 🧩 Limpiar formulario al cerrar el modal
-modalEl.addEventListener('hidden.bs.modal', () => {
-    form.reset();
-    modalTitle.textContent = 'Agregar Matriz';
-    editando = null;
+// --- Recargar manualmente ---
+btnRecargar?.addEventListener('click', async () => {
+    await cargarAppsRelacionadas();
+    Swal.fire({
+        icon: 'success',
+        title: 'Actualizado',
+        text: 'Datos recargados correctamente.',
+        timer: 1500,
+        showConfirmButton: false,
+    });
 });
