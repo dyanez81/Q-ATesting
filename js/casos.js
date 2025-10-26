@@ -10,9 +10,11 @@ import {
     getDoc,
     query,
     where,
+    orderBy,
+    limit,
+    startAfter,
     serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
-
 import {
     ref,
     uploadBytes,
@@ -26,8 +28,6 @@ const params = new URLSearchParams(window.location.search);
 const appId = params.get('app');
 const moduloId = params.get('modulo');
 const matrizId = params.get('id');
-
-console.log('🧩 Parámetros URL:', { appId, moduloId, matrizId });
 
 if (!appId || !moduloId || !matrizId) {
     Swal.fire('Error', 'No se ha especificado correctamente la matriz.', 'error')
@@ -43,8 +43,9 @@ const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
 const evidenciaInput = document.getElementById('evidenciaCaso');
 const matrizTitleEl = document.getElementById('nombreMatriz');
 const backBtn = document.getElementById('btnVolver');
+const btnRecargar = document.getElementById('btnRecargarCasos');
 
-// --- Modal y formulario de bug ---
+// --- Modal Bug ---
 const modalBugEl = document.getElementById('modalBug');
 const modalBug = modalBugEl ? new bootstrap.Modal(modalBugEl) : null;
 const formBug = document.getElementById('formBug');
@@ -53,108 +54,134 @@ const bugNombre = document.getElementById('bugNombre');
 const bugDescripcion = document.getElementById('bugDescripcion');
 const bugEvidencia = document.getElementById('bugEvidencia');
 
-// --- Variables globales ---
+// --- Variables ---
 let editandoId = null;
 let casoActual = null;
-
-// --- Ruta base ---
 const casosPathBase = `apps/${appId}/modulos/${moduloId}/matrices/${matrizId}/casos`;
 
-// --- Pintar título de la matriz ---
+// --- Configuración de paginación ---
+const PAGE_SIZE = 10;
+let currentPage = 1;
+let casosCache = [];
+
+// --- 🧩 Pintar título de la matriz ---
 async function pintarTituloMatriz() {
     try {
         const matrizRef = doc(db, `apps/${appId}/modulos/${moduloId}/matrices/${matrizId}`);
         const snap = await getDoc(matrizRef);
         if (snap.exists()) {
             const data = snap.data();
-            matrizTitleEl.textContent = data.nombre || data.NombreDelCaso || 'Matriz';
+            matrizTitleEl.textContent = data.nombre || 'Matriz de Casos';
         }
     } catch (e) {
         console.error('Error obteniendo título de la matriz:', e);
     }
 }
 
-// --- Botón Volver ---
+// --- 🔙 Botón Volver ---
 backBtn?.addEventListener('click', () => {
-    window.location.href = 'matrices.html';
+    window.location.href = `matrices.html`;
 });
 
-// --- Cargar casos ---
-async function cargarCasos() {
-    if (!tabla) return;
-    tabla.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">Cargando casos...</td></tr>`;
+// --- 🔁 Recargar manual ---
+btnRecargar?.addEventListener('click', () => cargarCasos(1));
 
+// --- Cargar casos con paginación ---
+async function cargarCasos(pagina = 1) {
+    tabla.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">Cargando casos...</td></tr>`;
     try {
-        // 1️⃣ Obtener todos los casos
         const casosSnap = await getDocs(collection(db, casosPathBase));
         if (casosSnap.empty) {
             tabla.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">No hay casos registrados.</td></tr>`;
             return;
         }
 
-        // 2️⃣ Obtener todos los bugs de la matriz actual
-        const bugsQuery = query(
-            collection(db, 'bugs'),
-            where('datos.matrizId', '==', matrizId)
-        );
+        // Obtener bugs vinculados a esta matriz
+        const bugsQuery = query(collection(db, 'bugs'), where('datos.matrizId', '==', matrizId));
         const bugsSnap = await getDocs(bugsQuery);
 
-        // Mapeamos casos con bugs existentes
         const casosConBugs = new Set();
         bugsSnap.forEach((bug) => {
             const bugData = bug.data();
             if (bugData.datos?.casoId) casosConBugs.add(bugData.datos.casoId);
         });
 
-        // 3️⃣ Renderizar tabla
-        let html = '';
-        let i = 1;
-        casosSnap.forEach((docSnap) => {
+        casosCache = casosSnap.docs.map((docSnap) => {
             const data = docSnap.data();
-            const tieneBug = casosConBugs.has(docSnap.id);
-
-            // 🐞 Icono visual si el caso tiene bugs
-            const iconoBug = tieneBug
-                ? `<i class="bi bi-bug-fill text-danger ms-1" title="Este caso tiene reportes de bugs"></i>`
-                : '';
-
-            // 🎨 Badge de color según estado
-            let estadoClass = 'secondary';
-            if (data.Estado === 'Positivo') estadoClass = 'success';
-            else if (data.Estado === 'Pendiente') estadoClass = 'warning';
-            else if (data.Estado === 'Fallo') estadoClass = 'danger';
-            else if (data.Estado === 'Bloqueado') estadoClass = 'secondary';
-
-            html += `
-        <tr>
-          <td>${i++}</td>
-          <td>${data.NombreDelCaso || '-'} ${iconoBug}</td>
-          <td>${data.TipoDePrueba || '-'}</td>
-          <td><span class="badge bg-${estadoClass}">${data.Estado || '-'}</span></td>
-          <td>${data.Tester || '-'}</td>
-          <td class="text-center">
-            <button class="btn btn-sm btn-outline-primary me-2" data-id="${docSnap.id}" data-action="editar" title="Editar caso">
-              <i class="bi bi-pencil"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-danger me-2" data-id="${docSnap.id}" data-action="eliminar" title="Eliminar caso">
-              <i class="bi bi-trash"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-warning" data-id="${docSnap.id}" data-action="bug" title="Reportar bug">
-              <i class="bi bi-bug"></i>
-            </button>
-          </td>
-        </tr>`;
+            return {
+                id: docSnap.id,
+                ...data,
+                tieneBug: casosConBugs.has(docSnap.id),
+            };
         });
 
-        tabla.innerHTML = html;
+        renderCasos(pagina);
     } catch (error) {
         console.error('Error al cargar casos:', error);
         Swal.fire('Error', 'No se pudieron cargar los casos.', 'error');
     }
 }
 
+// --- Render paginado ---
+function renderCasos(pagina) {
+    const start = (pagina - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    const pageData = casosCache.slice(start, end);
+    currentPage = pagina;
 
-// --- Guardar / Actualizar caso ---
+    if (!pageData.length) {
+        tabla.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">No hay casos en esta página.</td></tr>`;
+        return;
+    }
+
+    let html = '';
+    let i = start + 1;
+
+    pageData.forEach((c) => {
+        const iconoBug = c.tieneBug
+            ? `<i class="bi bi-bug-fill text-danger ms-1" title="Este caso tiene bugs"></i>`
+            : '';
+
+        let estadoClass = 'secondary';
+        if (c.Estado === 'Positivo') estadoClass = 'success';
+        else if (c.Estado === 'Pendiente') estadoClass = 'warning';
+        else if (c.Estado === 'Fallo') estadoClass = 'danger';
+        else if (c.Estado === 'Bloqueado') estadoClass = 'dark';
+
+        html += `
+      <tr>
+        <td>${i++}</td>
+        <td>${c.NombreDelCaso || '-'} ${iconoBug}</td>
+        <td>${c.TipoDePrueba || '-'}</td>
+        <td><span class="badge bg-${estadoClass}">${c.Estado || '-'}</span></td>
+        <td>${c.Tester || '-'}</td>
+        <td class="text-center">
+          <button class="btn btn-sm btn-outline-primary me-2" data-id="${c.id}" data-action="editar" title="Editar caso">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-danger me-2" data-id="${c.id}" data-action="eliminar" title="Eliminar caso">
+            <i class="bi bi-trash"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-warning" data-id="${c.id}" data-action="bug" title="Reportar bug">
+            <i class="bi bi-bug"></i>
+          </button>
+        </td>
+      </tr>`;
+    });
+
+    tabla.innerHTML = html;
+    document.getElementById('paginaActual').textContent = `Página ${pagina}`;
+}
+
+// --- Paginación botones ---
+document.getElementById('nextPage')?.addEventListener('click', () => {
+    if ((currentPage * PAGE_SIZE) < casosCache.length) renderCasos(currentPage + 1);
+});
+document.getElementById('prevPage')?.addEventListener('click', () => {
+    if (currentPage > 1) renderCasos(currentPage - 1);
+});
+
+// --- CRUD CASOS ---
 form?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -182,8 +209,7 @@ form?.addEventListener('submit', async (e) => {
         }
 
         if (editandoId) {
-            const refCaso = doc(db, `${casosPathBase}/${editandoId}`);
-            await updateDoc(refCaso, caso);
+            await updateDoc(doc(db, `${casosPathBase}/${editandoId}`), caso);
             Swal.fire('Actualizado', 'El caso fue actualizado correctamente.', 'success');
         } else {
             caso.createdAt = serverTimestamp();
@@ -194,14 +220,14 @@ form?.addEventListener('submit', async (e) => {
         form.reset();
         editandoId = null;
         modal?.hide();
-        cargarCasos();
+        cargarCasos(currentPage);
     } catch (err) {
         console.error('Error al guardar caso:', err);
         Swal.fire('Error', 'No se pudo guardar el caso.', 'error');
     }
 });
 
-// --- Delegación de eventos: Editar / Eliminar / Reportar Bug ---
+// --- Eventos de tabla ---
 tabla?.addEventListener('click', async (e) => {
     const btn = e.target.closest('button');
     if (!btn) return;
@@ -237,7 +263,7 @@ tabla?.addEventListener('click', async (e) => {
         if (!confirm.isConfirmed) return;
         await deleteDoc(doc(db, `${casosPathBase}/${id}`));
         Swal.fire('Eliminado', 'El caso fue eliminado correctamente.', 'success');
-        cargarCasos();
+        cargarCasos(currentPage);
     }
 
     if (action === 'bug') {
@@ -272,7 +298,7 @@ formBug?.addEventListener('submit', async (e) => {
             descripcion: bugDescripcion.value.trim(),
             estado: 'Abierto',
             fechaReporte: serverTimestamp(),
-            tester: auth.currentUser?.uid || 'anon',
+            tester: auth.currentUser?.email || 'anon',
             evidenciaUrl,
             datos: {
                 appId,
@@ -287,13 +313,14 @@ formBug?.addEventListener('submit', async (e) => {
         await addDoc(collection(db, 'bugs'), bug);
         Swal.fire('Reportado', 'El bug fue registrado correctamente.', 'success');
         modalBug?.hide();
+        cargarCasos(currentPage);
     } catch (error) {
         console.error('❌ Error registrando bug:', error);
         Swal.fire('Error', 'No se pudo registrar el bug.', 'error');
     }
 });
 
-// --- Inicio ---
+// --- Inicialización ---
 onAuthStateChanged(auth, (user) => {
     if (!user) {
         Swal.fire({
@@ -305,137 +332,5 @@ onAuthStateChanged(auth, (user) => {
     } else {
         pintarTituloMatriz();
         cargarCasos();
-    }
-});
-
-
-// 🔹 Botón Exportar Excel
-function formatoFecha(timestamp) {
-    if (!timestamp?.toDate) return '';
-    const d = timestamp.toDate();
-    const dia = String(d.getDate()).padStart(2, '0');
-    const mes = String(d.getMonth() + 1).padStart(2, '0');
-    const año = d.getFullYear();
-    return `${dia}/${mes}/${año}`;
-}
-
-// 📦 Exportar Excel
-document.getElementById('btnExportarExcel')?.addEventListener('click', async () => {
-    try {
-        Swal.fire({
-            title: 'Generando Excel...',
-            text: 'Por favor espera un momento.',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-
-        // 1️⃣ Obtener datos de la matriz
-        const matrizRef = doc(db, `apps/${appId}/modulos/${moduloId}/matrices/${matrizId}`);
-        const matrizSnap = await getDoc(matrizRef);
-        const matrizNombre = matrizSnap.exists() ? matrizSnap.data().nombre || "Matriz" : "Matriz";
-
-        // 2️⃣ Obtener casos
-        const casosSnap = await getDocs(collection(db, `apps/${appId}/modulos/${moduloId}/matrices/${matrizId}/casos`));
-        if (casosSnap.empty) {
-            Swal.close();
-            Swal.fire('Sin datos', 'No hay casos registrados para exportar.', 'info');
-            return;
-        }
-
-        const casosData = [];
-        const bugsData = [];
-
-        for (const casoDoc of casosSnap.docs) {
-            const cData = casoDoc.data();
-
-            casosData.push({
-                "Nombre del Caso": cData.NombreDelCaso || '',
-                "Descripción": cData.Descripcion || '',
-                "Precondiciones": cData.Precondiciones || '',
-                "Pasos": cData.Pasos || '',
-                "Tipo de Prueba": cData.TipoDePrueba || '',
-                "Resultado Esperado": cData.ResultadoEsperado || '',
-                "Estado": cData.Estado || '',
-                "Tester": cData.Tester || '',
-                "Referencia HU": cData.ReferenciaHU || '',
-                "Comentarios": cData.Comentarios || '',
-                "Fecha": formatoFecha(cData.Fecha),
-            });
-
-            // 3️⃣ Bugs de cada caso
-            const bugsSnap = await getDocs(collection(db, `apps/${appId}/modulos/${moduloId}/matrices/${matrizId}/casos/${casoDoc.id}/bugs`));
-            bugsSnap.forEach((bugDoc) => {
-                const bData = bugDoc.data();
-                bugsData.push({
-                    "Nombre del Bug": bData.nombre || '',
-                    "Descripción": bData.descripcion || '',
-                    "Estado": bData.estado || '',
-                    "Tester Reportó": bData.tester || '',
-                    "Fecha Reporte": formatoFecha(bData.fechaReporte),
-                    "App ID": bData.datos?.appId || '',
-                    "Módulo ID": bData.datos?.moduloId || '',
-                    "Matriz ID": bData.datos?.matrizId || '',
-                    "Caso ID": bData.datos?.casoId || '',
-                    "Caso Nombre": bData.datos?.casoNombre || '',
-                    "Comentario de Solución": bData.solucion?.comentarios || '',
-                    "Fecha de Solución": formatoFecha(bData.solucion?.fechaUpDate),
-                });
-            });
-        }
-
-        // 4️⃣ Crear libro y hojas
-        const wb = XLSX.utils.book_new();
-
-        // 🧾 Encabezado con nombre matriz + fecha exportación
-        const fechaExportacion = new Date();
-        const fechaFormateada = `${String(fechaExportacion.getDate()).padStart(2, '0')}/${String(fechaExportacion.getMonth() + 1).padStart(2, '0')}/${fechaExportacion.getFullYear()}`;
-
-        const encabezado = [[
-            `Matriz: ${matrizNombre}`,
-            `Fecha de exportación: ${fechaFormateada}`
-        ], [], []]; // Dos filas de espacio antes de los datos
-
-        // 🟩 Hoja Casos
-        const wsCasos = XLSX.utils.json_to_sheet(casosData, { origin: "A4" });
-        XLSX.utils.sheet_add_aoa(wsCasos, encabezado, { origin: "A1" });
-
-        // 🪲 Hoja Bugs
-        const wsBugs = XLSX.utils.json_to_sheet(bugsData, { origin: "A4" });
-        XLSX.utils.sheet_add_aoa(wsBugs, encabezado, { origin: "A1" });
-
-        // 5️⃣ Estilos de encabezado
-        const setHeaderStyle = (ws) => {
-            const range = XLSX.utils.decode_range(ws['!ref']);
-            for (let C = range.s.c; C <= range.e.c; ++C) {
-                const cellAddress = XLSX.utils.encode_cell({ r: 3, c: C }); // fila 4 (encabezado de tabla)
-                if (!ws[cellAddress]) continue;
-                ws[cellAddress].s = {
-                    fill: { fgColor: { rgb: "CCE5FF" } },
-                    font: { bold: true, color: { rgb: "003366" } },
-                    alignment: { horizontal: "center", vertical: "center", wrapText: true }
-                };
-            }
-
-            // Ajustar anchos de columna
-            const colCount = range.e.c - range.s.c + 1;
-            ws['!cols'] = Array(colCount).fill({ wch: 25 });
-        };
-
-        setHeaderStyle(wsCasos);
-        setHeaderStyle(wsBugs);
-
-        XLSX.utils.book_append_sheet(wb, wsCasos, "Casos");
-        XLSX.utils.book_append_sheet(wb, wsBugs, "Bugs");
-
-        // 6️⃣ Guardar archivo
-        const nombreArchivo = `${matrizNombre.replace(/\s+/g, '_')}_Casos_Bugs.xlsx`;
-        XLSX.writeFile(wb, nombreArchivo);
-
-        Swal.close();
-        Swal.fire('Descargado', 'El archivo Excel fue generado correctamente.', 'success');
-    } catch (error) {
-        console.error('❌ Error generando Excel:', error);
-        Swal.close();
-        Swal.fire('Error', 'No se pudo generar el archivo Excel.', 'error');
     }
 });
