@@ -8,6 +8,9 @@ import {
     doc,
     getDocs,
     getDoc,
+    query,
+    orderBy,
+    limit,
     serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
 import * as XLSX from 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm';
@@ -52,56 +55,115 @@ selectAsignado.addEventListener('change', () => {
     }
 });
 
-// --- Cargar tabla de dispositivos ---
-async function cargarDispositivos() {
-    const snapshot = await getDocs(collection(db, 'dispositivos'));
-    tabla.innerHTML = '';
-    let i = 1;
+// --- Configuración de paginación ---
+const PAGE_SIZE = 10;
+let lastVisible = null;
+let firstVisible = null;
+let currentPage = 1;
+let lastDocsStack = [];
 
-    snapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-      <td>${i++}</td>
-      <td>${data.tipo || '-'}</td>
-      <td>${data.marca || '-'}</td>
-      <td>${data.modelo || '-'}</td>
-      <td>${data.sistemaOperativo || '-'}</td>
-      <td>${data.version || '-'}</td>
-      <td>${data.asignadoA || 'Finsus'}</td>
-      <td>${(() => {
-                const estado = (data.estado || 'Disponible').toLowerCase();
-                if (estado === 'disponible') {
-                    return `<span class="badge bg-success d-flex align-items-center justify-content-center gap-1">
-                <i class="bi bi-check-circle-fill mr-1"></i> Disponible
-              </span>`;
-                } else if (estado === 'asignado') {
-                    return `<span class="badge bg-primary d-flex align-items-center justify-content-center gap-1">
-                <i class="bi bi-person-badge-fill mr-1"></i> Asignado
-              </span>`;
-                } else if (estado === 'dañado') {
-                    return `<span class="badge bg-danger d-flex align-items-center justify-content-center gap-1">
-                <i class="bi bi-exclamation-triangle-fill mr-1"></i> Dañado
-              </span>`;
-                } else {
-                    return `<span class="badge bg-secondary d-flex align-items-center justify-content-center gap-1">
-                <i class="bi bi-question-circle-fill mr-1"></i> ${data.estado}
-              </span>`;
-                }
-            })()}
-        </td>
+// --- Cargar tabla de dispositivos con paginación ---
+async function cargarDispositivos(pagina = 1, direction = 'next') {
+    const ref = collection(db, 'dispositivos');
+    tabla.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">Cargando dispositivos...</td></tr>`;
 
-      <td class="text-center">
-        <button class="btn btn-sm btn-outline-primary me-2" data-id="${docSnap.id}" data-action="editar">
-          <i class="bi bi-pencil"></i>
-        </button>
-        <button class="btn btn-sm btn-outline-danger" data-id="${docSnap.id}" data-action="eliminar">
-          <i class="bi bi-trash"></i>
-        </button>
-      </td>`;
-        tabla.appendChild(tr);
-    });
+    try {
+        let q;
+
+        // Primera carga
+        if (pagina === 1 && direction === 'next') {
+            q = query(ref, orderBy('createdAt', 'desc'), limit(PAGE_SIZE));
+            lastDocsStack = [];
+        }
+        // Página siguiente
+        else if (direction === 'next' && lastVisible) {
+            q = query(ref, orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(PAGE_SIZE));
+        }
+        // Página anterior
+        else if (direction === 'prev' && lastDocsStack.length > 0) {
+            const prevCursor = lastDocsStack.pop();
+            q = query(ref, orderBy('createdAt', 'desc'), startAfter(prevCursor), limit(PAGE_SIZE));
+            currentPage--;
+        }
+
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            tabla.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">No hay dispositivos registrados.</td></tr>`;
+            return;
+        }
+
+        // Actualizamos cursores
+        firstVisible = snapshot.docs[0];
+        lastVisible = snapshot.docs[snapshot.docs.length - 1];
+        if (direction === 'next' && snapshot.docs.length > 0) {
+            lastDocsStack.push(firstVisible);
+        }
+
+        // Renderizado de tabla
+        tabla.innerHTML = '';
+        let i = (currentPage - 1) * PAGE_SIZE + 1;
+
+        snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+
+            const estado = (data.estado || 'Disponible').toLowerCase();
+            let badge = `
+        <span class="badge bg-secondary d-flex align-items-center justify-content-center gap-1">
+          <i class="bi bi-question-circle-fill"></i> ${data.estado || 'Desconocido'}
+        </span>
+      `;
+
+            if (estado === 'disponible') {
+                badge = `
+          <span class="badge bg-success d-flex align-items-center justify-content-center gap-1">
+            <i class="bi bi-check-circle-fill"></i> Disponible
+          </span>
+        `;
+            } else if (estado === 'asignado') {
+                badge = `
+          <span class="badge bg-primary d-flex align-items-center justify-content-center gap-1">
+            <i class="bi bi-person-badge-fill"></i> Asignado
+          </span>
+        `;
+            } else if (estado === 'dañado') {
+                badge = `
+          <span class="badge bg-danger d-flex align-items-center justify-content-center gap-1">
+            <i class="bi bi-exclamation-triangle-fill"></i> Dañado
+          </span>
+        `;
+            }
+
+            const fila = `
+        <tr>
+          <td>${i++}</td>
+          <td>${data.tipo || '-'}</td>
+          <td>${data.marca || '-'}</td>
+          <td>${data.modelo || '-'}</td>
+          <td>${data.sistemaOperativo || '-'}</td>
+          <td>${data.version || '-'}</td>
+          <td>${data.asignadoA || 'Finsus'}</td>
+          <td>${badge}</td>
+          <td class="text-center">
+            <button class="btn btn-sm btn-outline-primary me-2" data-id="${docSnap.id}" data-action="editar">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" data-id="${docSnap.id}" data-action="eliminar">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+            tabla.insertAdjacentHTML('beforeend', fila);
+        });
+
+        document.getElementById('paginaActual').textContent = `Página ${currentPage}`;
+    } catch (err) {
+        console.error('Error al cargar dispositivos:', err);
+        Swal.fire('Error', 'No se pudieron cargar los dispositivos.', 'error');
+    }
 }
+
 
 // --- Guardar / editar dispositivo ---
 form.addEventListener('submit', async (e) => {
@@ -242,4 +304,22 @@ modalEl.addEventListener('hidden.bs.modal', () => {
 (async () => {
     await cargarUsuarios();
     await cargarDispositivos();
+})();
+// --- Eventos de paginación ---
+document.getElementById('nextPage')?.addEventListener('click', async () => {
+    currentPage++;
+    await cargarDispositivos(currentPage, 'next');
+});
+
+document.getElementById('prevPage')?.addEventListener('click', async () => {
+    if (currentPage > 1) {
+        currentPage--;
+        await cargarDispositivos(currentPage, 'prev');
+    }
+});
+
+// --- Inicialización ---
+(async () => {
+    await cargarUsuarios();
+    await cargarDispositivos(1);
 })();

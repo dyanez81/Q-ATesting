@@ -98,6 +98,7 @@ export async function loadNavbar() {
         .dropdown-menu { z-index: 1080; }
       `;
       document.head.appendChild(style);
+      
     }
 
     // 🔹 Marcar el link activo

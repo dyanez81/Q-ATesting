@@ -15,7 +15,13 @@
 <body>
   <div class="main-content">
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2>Gestión de Aplicaciones</h2>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 >Aplicaciones registradas
+        </h2>
+        <button id="btnRecargarApps" class="btn btn-outline-primary btn-sm ml-2">
+          <i class="bi bi-arrow-clockwise"></i>
+        </button>
+      </div>
       <button class="btn btn-primary" id="btnNuevaApp" data-bs-toggle="modal" data-bs-target="#modalApp">
         <i class="bi bi-plus-lg"></i> Nueva App
       </button>
@@ -31,7 +37,7 @@
                 <th>#</th>
                 <th>Nombre App</th>
                 <th>Tipo</th>
-                <th>Tester Asignado</th>
+                <th>Asignado a</th>
                 <th>Requerimiento</th>
                 <th>Fecha Fin</th>
                 <th>Acciones</th>
@@ -39,6 +45,15 @@
             </thead>
             <tbody></tbody>
           </table>
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <button id="prevPage" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-arrow-left"></i> Anterior
+            </button>
+            <span id="paginaActual" class="fw-semibold text-primary">Página 1</span>
+            <button id="nextPage" class="btn btn-outline-secondary btn-sm">
+              Siguiente <i class="bi bi-arrow-right"></i>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -132,4 +147,5 @@
   <script type="module" src="./js/apps.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>

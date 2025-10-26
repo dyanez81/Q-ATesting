@@ -19,6 +19,7 @@ import {
     getDownloadURL,
 } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
+import * as XLSX from "https://cdn.sheetjs.com/xlsx-0.20.0/package/xlsx.mjs";
 
 // --- Parámetros URL ---
 const params = new URLSearchParams(window.location.search);
@@ -304,5 +305,137 @@ onAuthStateChanged(auth, (user) => {
     } else {
         pintarTituloMatriz();
         cargarCasos();
+    }
+});
+
+
+// 🔹 Botón Exportar Excel
+function formatoFecha(timestamp) {
+    if (!timestamp?.toDate) return '';
+    const d = timestamp.toDate();
+    const dia = String(d.getDate()).padStart(2, '0');
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    const año = d.getFullYear();
+    return `${dia}/${mes}/${año}`;
+}
+
+// 📦 Exportar Excel
+document.getElementById('btnExportarExcel')?.addEventListener('click', async () => {
+    try {
+        Swal.fire({
+            title: 'Generando Excel...',
+            text: 'Por favor espera un momento.',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        // 1️⃣ Obtener datos de la matriz
+        const matrizRef = doc(db, `apps/${appId}/modulos/${moduloId}/matrices/${matrizId}`);
+        const matrizSnap = await getDoc(matrizRef);
+        const matrizNombre = matrizSnap.exists() ? matrizSnap.data().nombre || "Matriz" : "Matriz";
+
+        // 2️⃣ Obtener casos
+        const casosSnap = await getDocs(collection(db, `apps/${appId}/modulos/${moduloId}/matrices/${matrizId}/casos`));
+        if (casosSnap.empty) {
+            Swal.close();
+            Swal.fire('Sin datos', 'No hay casos registrados para exportar.', 'info');
+            return;
+        }
+
+        const casosData = [];
+        const bugsData = [];
+
+        for (const casoDoc of casosSnap.docs) {
+            const cData = casoDoc.data();
+
+            casosData.push({
+                "Nombre del Caso": cData.NombreDelCaso || '',
+                "Descripción": cData.Descripcion || '',
+                "Precondiciones": cData.Precondiciones || '',
+                "Pasos": cData.Pasos || '',
+                "Tipo de Prueba": cData.TipoDePrueba || '',
+                "Resultado Esperado": cData.ResultadoEsperado || '',
+                "Estado": cData.Estado || '',
+                "Tester": cData.Tester || '',
+                "Referencia HU": cData.ReferenciaHU || '',
+                "Comentarios": cData.Comentarios || '',
+                "Fecha": formatoFecha(cData.Fecha),
+            });
+
+            // 3️⃣ Bugs de cada caso
+            const bugsSnap = await getDocs(collection(db, `apps/${appId}/modulos/${moduloId}/matrices/${matrizId}/casos/${casoDoc.id}/bugs`));
+            bugsSnap.forEach((bugDoc) => {
+                const bData = bugDoc.data();
+                bugsData.push({
+                    "Nombre del Bug": bData.nombre || '',
+                    "Descripción": bData.descripcion || '',
+                    "Estado": bData.estado || '',
+                    "Tester Reportó": bData.tester || '',
+                    "Fecha Reporte": formatoFecha(bData.fechaReporte),
+                    "App ID": bData.datos?.appId || '',
+                    "Módulo ID": bData.datos?.moduloId || '',
+                    "Matriz ID": bData.datos?.matrizId || '',
+                    "Caso ID": bData.datos?.casoId || '',
+                    "Caso Nombre": bData.datos?.casoNombre || '',
+                    "Comentario de Solución": bData.solucion?.comentarios || '',
+                    "Fecha de Solución": formatoFecha(bData.solucion?.fechaUpDate),
+                });
+            });
+        }
+
+        // 4️⃣ Crear libro y hojas
+        const wb = XLSX.utils.book_new();
+
+        // 🧾 Encabezado con nombre matriz + fecha exportación
+        const fechaExportacion = new Date();
+        const fechaFormateada = `${String(fechaExportacion.getDate()).padStart(2, '0')}/${String(fechaExportacion.getMonth() + 1).padStart(2, '0')}/${fechaExportacion.getFullYear()}`;
+
+        const encabezado = [[
+            `Matriz: ${matrizNombre}`,
+            `Fecha de exportación: ${fechaFormateada}`
+        ], [], []]; // Dos filas de espacio antes de los datos
+
+        // 🟩 Hoja Casos
+        const wsCasos = XLSX.utils.json_to_sheet(casosData, { origin: "A4" });
+        XLSX.utils.sheet_add_aoa(wsCasos, encabezado, { origin: "A1" });
+
+        // 🪲 Hoja Bugs
+        const wsBugs = XLSX.utils.json_to_sheet(bugsData, { origin: "A4" });
+        XLSX.utils.sheet_add_aoa(wsBugs, encabezado, { origin: "A1" });
+
+        // 5️⃣ Estilos de encabezado
+        const setHeaderStyle = (ws) => {
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cellAddress = XLSX.utils.encode_cell({ r: 3, c: C }); // fila 4 (encabezado de tabla)
+                if (!ws[cellAddress]) continue;
+                ws[cellAddress].s = {
+                    fill: { fgColor: { rgb: "CCE5FF" } },
+                    font: { bold: true, color: { rgb: "003366" } },
+                    alignment: { horizontal: "center", vertical: "center", wrapText: true }
+                };
+            }
+
+            // Ajustar anchos de columna
+            const colCount = range.e.c - range.s.c + 1;
+            ws['!cols'] = Array(colCount).fill({ wch: 25 });
+        };
+
+        setHeaderStyle(wsCasos);
+        setHeaderStyle(wsBugs);
+
+        XLSX.utils.book_append_sheet(wb, wsCasos, "Casos");
+        XLSX.utils.book_append_sheet(wb, wsBugs, "Bugs");
+
+        // 6️⃣ Guardar archivo
+        const nombreArchivo = `${matrizNombre.replace(/\s+/g, '_')}_Casos_Bugs.xlsx`;
+        XLSX.writeFile(wb, nombreArchivo);
+
+        Swal.close();
+        Swal.fire('Descargado', 'El archivo Excel fue generado correctamente.', 'success');
+    } catch (error) {
+        console.error('❌ Error generando Excel:', error);
+        Swal.close();
+        Swal.fire('Error', 'No se pudo generar el archivo Excel.', 'error');
     }
 });

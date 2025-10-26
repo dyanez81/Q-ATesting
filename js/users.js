@@ -1,3 +1,4 @@
+// /js/usuarios.js
 import { db } from './firebase-config.js';
 import {
     collection,
@@ -5,55 +6,113 @@ import {
     doc,
     updateDoc,
     deleteDoc,
-    getDoc
+    getDoc,
+    query,
+    orderBy,
+    limit,
+    startAfter,
+    serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
 import Swal from 'https://cdn.jsdelivr.net/npm/sweetalert2@11/+esm';
 
-const tablaUsuarios = document.getElementById('tablaUsuarios');
+// --- Elementos del DOM ---
+const tablaUsuarios = document.querySelector('#tablaUsuarios');
 const formUsuario = document.getElementById('formUsuario');
 const modalEl = document.getElementById('modalUsuario');
 const modalUsuario = new bootstrap.Modal(modalEl);
-const usuariosRef = collection(db, 'users');
 const modalTitle = document.getElementById('modalUsuarioLabel');
+const btnRecargar = document.getElementById('btnRecargarUsuarios');
+const usuariosRef = collection(db, 'users');
 
 let editando = null;
 
-// 🧩 Cargar lista de usuarios
-async function cargarUsuarios() {
-    tablaUsuarios.innerHTML = '<tr><td colspan="7" class="text-center">Cargando usuarios...</td></tr>';
-    const snapshot = await getDocs(usuariosRef);
-    tablaUsuarios.innerHTML = '';
+// --- Configuración de paginación ---
+const PAGE_SIZE = 10;
+let lastVisible = null;
+let firstVisible = null;
+let currentPage = 1;
+let lastDocsStack = [];
 
-    let i = 1;
-    snapshot.forEach((userDoc) => {
-        const data = userDoc.data();
-        const activo = data.status === 'Activo';
+// 🧩 Cargar lista de usuarios con paginación
+async function cargarUsuarios(pagina = 1, direction = 'next') {
+    tablaUsuarios.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Cargando usuarios...</td></tr>`;
 
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-      <td>${i++}</td>
-      <td>${data.name || '-'}</td>
-      <td>${data.email || '-'}</td>
-      <td>${data.phone || '-'}</td>
-      <td>${data.role || '-'}</td>
-      <td><span class="badge ${activo ? 'bg-success' : 'bg-secondary'}">${activo ? 'Activo' : 'Inactivo'}</span></td>
-      <td class="text-center">
-        <button class="btn btn-sm btn-outline-primary me-1" data-id="${userDoc.id}" data-action="editar" title="Editar">
-          <i class="bi bi-pencil-square"></i>
-        </button>
-        <button class="btn btn-sm ${activo ? 'btn-outline-warning' : 'btn-outline-success'} me-1" data-id="${userDoc.id}" data-action="toggle" title="${activo ? 'Desactivar' : 'Activar'}">
-          <i class="bi ${activo ? 'bi-toggle-on' : 'bi-toggle-off'}"></i>
-        </button>
-        <button class="btn btn-sm btn-outline-danger" data-id="${userDoc.id}" data-action="eliminar" title="Eliminar">
-          <i class="bi bi-trash"></i>
-        </button>
-      </td>
-    `;
-        tablaUsuarios.appendChild(tr);
-    });
+    try {
+        let q;
+
+        // Primera página
+        if (pagina === 1 && direction === 'next') {
+            q = query(usuariosRef, orderBy('createdAt', 'desc'), limit(PAGE_SIZE));
+            lastDocsStack = [];
+        }
+        // Página siguiente
+        else if (direction === 'next' && lastVisible) {
+            q = query(usuariosRef, orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(PAGE_SIZE));
+        }
+        // Página anterior
+        else if (direction === 'prev' && lastDocsStack.length > 0) {
+            const prevCursor = lastDocsStack.pop();
+            q = query(usuariosRef, orderBy('createdAt', 'desc'), startAfter(prevCursor), limit(PAGE_SIZE));
+            currentPage--;
+        }
+
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) {
+            tablaUsuarios.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No hay usuarios registrados.</td></tr>`;
+            return;
+        }
+
+        // Actualiza cursores
+        firstVisible = snapshot.docs[0];
+        lastVisible = snapshot.docs[snapshot.docs.length - 1];
+        if (direction === 'next' && snapshot.docs.length > 0) {
+            lastDocsStack.push(firstVisible);
+        }
+
+        // Renderiza tabla
+        tablaUsuarios.innerHTML = '';
+        let i = (currentPage - 1) * PAGE_SIZE + 1;
+
+        snapshot.forEach((userDoc) => {
+            const data = userDoc.data();
+            const activo = data.status === 'Activo';
+
+            const fila = `
+        <tr>
+          <td>${i++}</td>
+          <td>${data.name || '-'}</td>
+          <td>${data.email || '-'}</td>
+          <td>${data.phone || '-'}</td>
+          <td>${data.role || '-'}</td>
+          <td>
+            <span class="badge ${activo ? 'bg-success' : 'bg-secondary'}">
+              ${activo ? 'Activo' : 'Inactivo'}
+            </span>
+          </td>
+          <td class="text-center">
+            <button class="btn btn-sm btn-outline-primary me-1" data-id="${userDoc.id}" data-action="editar" title="Editar">
+              <i class="bi bi-pencil-square"></i>
+            </button>
+            <button class="btn btn-sm ${activo ? 'btn-outline-warning' : 'btn-outline-success'} me-1" data-id="${userDoc.id}" data-action="toggle" title="${activo ? 'Desactivar' : 'Activar'}">
+              <i class="bi ${activo ? 'bi-toggle-on' : 'bi-toggle-off'}"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" data-id="${userDoc.id}" data-action="eliminar" title="Eliminar">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+            tablaUsuarios.insertAdjacentHTML('beforeend', fila);
+        });
+
+        document.getElementById('paginaActual').textContent = `Página ${currentPage}`;
+    } catch (err) {
+        console.error('❌ Error al cargar usuarios:', err);
+        Swal.fire('Error', 'No se pudieron cargar los usuarios.', 'error');
+    }
 }
 
-// 🧩 Escuchar clics en la tabla
+// 🧩 Acciones de tabla
 tablaUsuarios.addEventListener('click', async (e) => {
     const btn = e.target.closest('button');
     if (!btn) return;
@@ -79,14 +138,14 @@ tablaUsuarios.addEventListener('click', async (e) => {
 
         case 'toggle':
             const newStatus = btn.title === 'Desactivar' ? 'Inactivo' : 'Activo';
-            await updateDoc(ref, { status: newStatus });
+            await updateDoc(ref, { status: newStatus, updatedAt: serverTimestamp() });
             Swal.fire({
                 icon: 'success',
                 title: `Usuario ${newStatus}`,
                 timer: 1500,
                 showConfirmButton: false
             });
-            cargarUsuarios();
+            cargarUsuarios(currentPage);
             break;
 
         case 'eliminar':
@@ -102,29 +161,14 @@ tablaUsuarios.addEventListener('click', async (e) => {
                 if (result.isConfirmed) {
                     await deleteDoc(ref);
                     Swal.fire('🗑️ Eliminado', 'El usuario fue eliminado correctamente.', 'success');
-                    cargarUsuarios();
+                    cargarUsuarios(currentPage);
                 }
             });
             break;
     }
 });
-// 🧩 Resetear modal cuando se abre para nuevo usuario
-modalEl.addEventListener('show.bs.modal', () => {
-    if (!editando) {
-        modalTitle.textContent = 'Agregar Usuario';
-        formUsuario.reset();
-    }
-});
 
-// 🧩 Limpiar formulario al cerrar el modal
-modalEl.addEventListener('hidden.bs.modal', () => {
-    formUsuario.reset();
-    modalTitle.textContent = 'Agregar Usuario';
-    editando = null;
-});
-
-
-// 🧩 Guardar usuario (crear o editar)
+// 🧩 Guardar usuario (editar)
 formUsuario.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -140,7 +184,8 @@ formUsuario.addEventListener('submit', async (e) => {
                 name: nombre,
                 email: correo,
                 phone: telefono,
-                role: rol
+                role: rol,
+                updatedAt: serverTimestamp()
             });
             Swal.fire({
                 icon: 'success',
@@ -156,23 +201,39 @@ formUsuario.addEventListener('submit', async (e) => {
                 showConfirmButton: false
             });
         }
+
         modalUsuario.hide();
         formUsuario.reset();
-        modalTitle.textContent = 'Agregar Usuario';
         editando = null;
-        cargarUsuarios();
+        cargarUsuarios(currentPage);
     } catch (err) {
         console.error(err);
         Swal.fire('Error', 'Ocurrió un error al guardar los cambios.', 'error');
     }
 });
 
-// 🧩 Resetear modal cuando se abre para nuevo usuario
-modalEl.addEventListener('show.bs.modal', () => {
-    if (!editando) {
-        modalTitle.textContent = 'Agregar Usuario';
-        formUsuario.reset();
+// 🧩 Reset modal
+modalEl.addEventListener('hidden.bs.modal', () => {
+    formUsuario.reset();
+    modalTitle.textContent = 'Agregar Usuario';
+    editando = null;
+});
+
+// 🧭 Paginación
+document.getElementById('nextPage')?.addEventListener('click', async () => {
+    currentPage++;
+    await cargarUsuarios(currentPage, 'next');
+});
+
+document.getElementById('prevPage')?.addEventListener('click', async () => {
+    if (currentPage > 1) {
+        currentPage--;
+        await cargarUsuarios(currentPage, 'prev');
     }
 });
 
-cargarUsuarios();
+// 🧩 Recargar lista manual
+btnRecargar?.addEventListener('click', () => cargarUsuarios(1));
+
+// 🧩 Inicialización
+cargarUsuarios(1);

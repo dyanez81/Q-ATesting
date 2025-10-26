@@ -9,6 +9,9 @@ import {
     doc,
     getDoc,
     onSnapshot,
+    query,
+    orderBy,
+    limit,
     serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
@@ -35,18 +38,72 @@ onAuthStateChanged(auth, (user) => {
         cargarCuentas();
     }
 });
+document.getElementById('nextPage')?.addEventListener('click', async () => {
+    currentPage++;
+    await cargarCuentas(currentPage, 'next');
+});
 
+document.getElementById('prevPage')?.addEventListener('click', async () => {
+    if (currentPage > 1) {
+        currentPage--;
+        await cargarCuentas(currentPage, 'prev');
+    }
+});
+
+// Cargar primera página al iniciar sesión
+onAuthStateChanged(auth, (user) => {
+    if (user) cargarCuentas(1);
+});
+
+
+// --- Configuración de paginación ---
+const PAGE_SIZE = 10;
+let lastVisible = null;
+let firstVisible = null;
+let currentPage = 1;
+let lastDocsStack = [];
 // --- Cargar cuentas en tiempo real ---
-function cargarCuentas() {
+async function cargarCuentas(pagina = 1, direction = 'next') {
     const ref = collection(db, 'cuentas_pruebas');
-    onSnapshot(ref, (snapshot) => {
-        tabla.innerHTML = '';
+    tabla.innerHTML = `<tr><td colspan="12" class="text-center text-muted py-4">Cargando cuentas...</td></tr>`;
+
+    try {
+        let q;
+
+        // Primera carga
+        if (pagina === 1 && direction === 'next') {
+            q = query(ref, orderBy('createdAt', 'desc'), limit(PAGE_SIZE));
+            lastDocsStack = [];
+        }
+        // Página siguiente
+        else if (direction === 'next' && lastVisible) {
+            q = query(ref, orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(PAGE_SIZE));
+        }
+        // Página anterior
+        else if (direction === 'prev' && lastDocsStack.length > 0) {
+            const prevCursor = lastDocsStack.pop();
+            q = query(ref, orderBy('createdAt', 'desc'), startAfter(prevCursor), limit(PAGE_SIZE));
+            currentPage--;
+        }
+
+        const snapshot = await getDocs(q);
+
         if (snapshot.empty) {
             tabla.innerHTML = `<tr><td colspan="12" class="text-center text-muted py-4">No hay cuentas registradas.</td></tr>`;
             return;
         }
 
-        let i = 1;
+        // Actualizamos cursores
+        firstVisible = snapshot.docs[0];
+        lastVisible = snapshot.docs[snapshot.docs.length - 1];
+        if (direction === 'next' && snapshot.docs.length > 0) {
+            lastDocsStack.push(firstVisible);
+        }
+
+        // Renderizado
+        tabla.innerHTML = '';
+        let i = (currentPage - 1) * PAGE_SIZE + 1;
+
         snapshot.forEach((docSnap) => {
             const c = docSnap.data();
             const car = c.caracteristicas || {};
@@ -59,38 +116,42 @@ function cargarCuentas() {
             else if (c.estatus === 'PLD') badgeClass = 'info';
 
             const fila = `
-                <tr>
-                <td>${i++}</td>
-                <td>${c.telefono}</td>
-                <td>${c.correo}</td>
-                <td>${c.tipoCuenta}</td>
-                <td><span class="badge bg-${badgeClass}">${c.estatus}</span></td>
-                <td>$${car.saldo?.toLocaleString() || 0}</td>
-                <td>${car.inversiones ? '✔️' : '—'}</td>
-                <td>${car.tdd ? '✔️' : '—'}</td>
-                <td>${car.tdc ? '✔️' : '—'}</td>
-                <td>${car.tdcg ? '✔️' : '—'}</td>
-                <td>${c.asignadoA?.[0]?.nombre || '—'}</td>
-                <td class="text-center">
-                    <button class="btn btn-sm btn-outline-primary me-2" data-id="${docSnap.id}" data-action="editar" title="Editar cuenta">
-                    <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary me-2" data-id="${docSnap.id}" data-action="asignar" title="Asignar usuario">
-                    <i class="bi bi-person-plus"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-info me-2" data-id="${docSnap.id}" data-action="comentarios" title="Ver comentarios">
-                    <i class="bi bi-chat-dots"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger" data-id="${docSnap.id}" data-action="eliminar" title="Eliminar cuenta">
-                    <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-                </tr>
-            `;
+        <tr>
+          <td>${i++}</td>
+          <td>${c.telefono || '—'}</td>
+          <td>${c.correo || '—'}</td>
+          <td>${c.tipoCuenta || '—'}</td>
+          <td><span class="badge bg-${badgeClass}">${c.estatus}</span></td>
+          <td>$${car.saldo?.toLocaleString() || 0}</td>
+          <td>${car.inversiones ? '✔️' : '—'}</td>
+          <td>${car.tdd ? '✔️' : '—'}</td>
+          <td>${car.tdc ? '✔️' : '—'}</td>
+          <td>${car.tdcg ? '✔️' : '—'}</td>
+          <td>${c.asignadoA?.[0]?.nombre || '—'}</td>
+          <td class="text-center">
+            <button class="btn btn-sm btn-outline-primary me-2" data-id="${docSnap.id}" data-action="editar" title="Editar cuenta">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary me-2" data-id="${docSnap.id}" data-action="asignar" title="Asignar usuario">
+              <i class="bi bi-person-plus"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-info me-2" data-id="${docSnap.id}" data-action="comentarios" title="Ver comentarios">
+              <i class="bi bi-chat-dots"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" data-id="${docSnap.id}" data-action="eliminar" title="Eliminar cuenta">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `;
             tabla.insertAdjacentHTML('beforeend', fila);
         });
 
-    });
+        document.getElementById('paginaActual').textContent = `Página ${currentPage}`;
+    } catch (err) {
+        console.error('❌ Error cargando cuentas:', err);
+        Swal.fire('Error', 'No se pudieron cargar las cuentas de prueba.', 'error');
+    }
 }
 
 // --- Generar datos automáticos ---

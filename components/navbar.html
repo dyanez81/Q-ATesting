@@ -1,7 +1,7 @@
 <!-- /components/navbar.html -->
 <div id="globalSidebar" class="sidebar">
   <div>
-    <h5 class="text-center mb-4">🧪 QA Finsus</h5>
+    <h5 class="text-center mb-4">🧪 Gestion QA</h5>
 
     <!-- 🔹 Navegación principal -->
     <a href="dashboard.html" class="nav-link d-flex align-items-center gap-2">
@@ -32,7 +32,7 @@
     </a>
     <li class="nav-item tester-only">
       <a href="cuentas.html" class="nav-link">
-        <i class="bi bi-person-vcard"></i> Cuentas de Prueba
+        <i class="bi bi-person-vcard mr-1"></i> Cuentas de Prueba
       </a>
     </li>
   </div>
@@ -48,25 +48,41 @@
 
 <!-- 🔹 Encabezado superior -->
 <div id="globalHeader" class="header d-flex justify-content-between align-items-center px-3 py-2">
+  <!-- Logo + Marca -->
   <div class="brand d-flex align-items-center gap-2">
     <img src="images/LogoQA1.png" alt="Logo" style="width:40px; height:40px;">
-    <h5 class="mb-0 fw-bold" style="color:#23223F;">QA Finsus</h5>
+    <h5 class="mb-0 fw-bold" style="color:#23223F;">Finsus</h5>
   </div>
 
-  <!-- Dropdown del usuario -->
-  <div id="userInfo" class="dropdown">
-    <a href="#" class="d-block text-end text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
-      <span id="userName" class="fw-semibold"></span><br>
-      <small id="userRole" class="text-muted"></small>
+  <!-- 🔹 Sección derecha: botón tareas + dropdown usuario -->
+  <div class="d-flex align-items-center gap-3">
+
+    <!-- Botón de tareas (siempre visible) -->
+    <a href="tareas.html" class="btn btn-sm btn-primary d-flex align-items-center shadow-sm px-3 mr-5">
+      <i class="bi bi-check2-square me-1 mr-1"></i> Tareas
     </a>
-    <ul class="dropdown-menu dropdown-menu-end shadow">
-      <li><a class="dropdown-item" href="perfil.html"><i class="bi bi-person-circle me-2 mr-1"></i>Perfil</a></li>
-      <li><a class="dropdown-item" href="tareas.html"><i class="bi bi-list-task me-2 mr-1"></i>Mis Tareas</a></li>
-      <li>
-        <hr class="dropdown-divider">
-      </li>
-      <li><a class="dropdown-item text-danger" href="#" onclick="logout()"><i
-            class="bi bi-box-arrow-right mr-2"></i>Salir</a></li>
-    </ul>
+
+    <!-- Dropdown del usuario -->
+    <div id="userInfo" class="dropdown">
+      <a href="#" class="d-block text-end text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+        <span id="userName" class="fw-semibold"></span><br>
+        <small id="userRole" class="text-muted"></small>
+      </a>
+      <ul class="dropdown-menu dropdown-menu-end shadow">
+        <li>
+          <a class="dropdown-item" href="perfil.html">
+            <i class="bi bi-person-circle me-2 mr-1"></i>Perfil
+          </a>
+        </li>
+        <li>
+          <hr class="dropdown-divider">
+        </li>
+        <li>
+          <a class="dropdown-item text-danger" href="#" onclick="logout()">
+            <i class="bi bi-box-arrow-right me-2 mr-1"></i>Salir
+          </a>
+        </li>
+      </ul>
+    </div>
   </div>
 </div>

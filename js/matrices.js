@@ -39,6 +39,7 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 // Cargar Apps y sus Módulos al <select>
+// --- Cargar apps y módulos al combo ---
 async function cargarAppsParaSelector() {
     try {
         appsCache = [];
@@ -52,23 +53,24 @@ async function cargarAppsParaSelector() {
 
         for (const appDoc of appsSnap.docs) {
             const aData = appDoc.data();
+            const appNombre = aData.nombre || '(Sin nombre)';
             const modSnap = await getDocs(collection(db, `apps/${appDoc.id}/modulos`));
 
             const modulos = modSnap.docs.map(m => ({ id: m.id, ...(m.data() || {}) }));
-            appsCache.push({ appId: appDoc.id, appNombre: aData.nombre || '(Sin nombre)', modulos });
+            appsCache.push({ appId: appDoc.id, appNombre, modulos });
 
-            // ✅ Si no hay módulos, mostrar la app con opción "(Sin módulo)"
+            // ✅ Si no tiene módulos, mostrar opción “(Sin módulo)”
             if (modulos.length === 0) {
                 const opt = document.createElement('option');
-                opt.value = `${appDoc.id}|_auto_`; // marcador para creación automática
-                opt.textContent = `${aData.nombre || '(Sin app)'} / (Sin módulo)`;
+                opt.value = `${appDoc.id}|_auto_`; // marcador para crear módulo automáticamente
+                opt.textContent = `${appNombre} / (Sin módulo)`;
                 appSelect.appendChild(opt);
             } else {
-                // Mostrar todos los módulos de la app
+                // Mostrar los módulos existentes
                 for (const m of modulos) {
                     const opt = document.createElement('option');
                     opt.value = `${appDoc.id}|${m.id}`;
-                    opt.textContent = `${aData.nombre || '(Sin app)'} / ${m.nombre || '(Sin módulo)'}`;
+                    opt.textContent = `${appNombre} / ${m.nombre || '(Sin módulo)'}`;
                     appSelect.appendChild(opt);
                 }
             }
@@ -78,6 +80,7 @@ async function cargarAppsParaSelector() {
         Swal.fire('Error', 'No se pudieron cargar las aplicaciones registradas.', 'error');
     }
 }
+
 
 // Cargar todas las matrices (recorre apps → modulos → matrices)
 async function cargarMatrices() {
@@ -159,12 +162,14 @@ btnRecargar?.addEventListener('click', cargarMatrices);
 // Guardar / Editar
 form?.addEventListener('submit', async (e) => {
     e.preventDefault();
+
     const sel = appSelect.value;
     if (!sel) {
         Swal.fire('Atención', 'Selecciona una aplicación/módulo.', 'info');
         return;
     }
-    const [appId, moduloId] = sel.split('|');
+
+    let [appId, moduloId] = sel.split('|');
 
     const payload = {
         nombre: document.getElementById('nombreMatriz').value.trim(),
@@ -175,15 +180,34 @@ form?.addEventListener('submit', async (e) => {
     };
 
     try {
+        // 🧩 Crear módulo automáticamente si no existe
+        if (moduloId === '_auto_') {
+            const appSnap = await getDoc(doc(db, `apps/${appId}`));
+            const appData = appSnap.exists() ? appSnap.data() : {};
+            const appNombre = appData.nombre || 'Aplicación';
+
+            const nuevoModuloRef = doc(collection(db, `apps/${appId}/modulos`));
+            await setDoc(nuevoModuloRef, {
+                nombre: `Módulo de ${appNombre} - General`,
+                ambiente: 'Desarrollo',
+                submodulo: 'Base',
+                fechaInicio: serverTimestamp(),
+                creadoAutomaticamente: true, // 👈 (opcional, para identificarlo)
+            });
+            moduloId = nuevoModuloRef.id;
+
+            console.log(`🧱 Módulo automático creado: ${moduloId}`);
+        }
+
         if (editCtx) {
-            // update
+            // ✏️ Actualizar matriz existente
             await updateDoc(
                 doc(db, `apps/${editCtx.appId}/modulos/${editCtx.moduloId}/matrices/${editCtx.matrizId}`),
                 payload
             );
             Swal.fire('Actualizado', 'La matriz se actualizó correctamente.', 'success');
         } else {
-            // create
+            // 🆕 Crear nueva matriz
             await addDoc(collection(db, `apps/${appId}/modulos/${moduloId}/matrices`), {
                 ...payload,
                 createdAt: serverTimestamp(),
@@ -195,11 +219,13 @@ form?.addEventListener('submit', async (e) => {
         editCtx = null;
         modal?.hide();
         await cargarMatrices();
+
     } catch (err) {
         console.error('❌ Error guardando matriz:', err);
         Swal.fire('Error', 'No se pudo guardar la matriz.', 'error');
     }
 });
+
 
 // Limpiar modal al cerrar
 modalEl?.addEventListener('hidden.bs.modal', () => {
