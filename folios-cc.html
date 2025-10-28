@@ -1,0 +1,360 @@
+<!-- /views/folios-cc.html -->
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Folios del CC</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/xlsx.mjs" type="module"></script>
+
+    <style>
+        .pagination {
+            gap: .5rem;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        .bg-success {
+            background-color: #198754 !important;
+        }
+
+        .bg-warning {
+            background-color: #ffc107 !important;
+        }
+
+        .bg-danger {
+            background-color: #dc3545 !important;
+        }
+
+        .bg-secondary {
+            background-color: #6c757d !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0"><i class="bi bi-diagram-3 me-2"></i> Folios del CC</h5>
+            <div class="d-flex gap-2">
+                <button id="btnNuevoFolio" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalFolio">
+                    <i class="bi bi-plus-lg me-1"></i> Nuevo folio
+                </button>
+            </div>
+        </div>
+
+        <!-- 🔹 Dashboard -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card text-center border-warning">
+                    <div class="card-body py-3">
+                        <h6 class="text-muted">Pendientes</h6>
+                        <h3 id="ccPendientes" class="fw-bold text-warning">0</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center border-success">
+                    <div class="card-body py-3">
+                        <h6 class="text-muted">Cerrados</h6>
+                        <h3 id="ccCerrados" class="fw-bold text-success">0</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center border-danger">
+                    <div class="card-body py-3">
+                        <h6 class="text-muted">Riesgo Alto</h6>
+                        <h3 id="ccRiesgoAlto" class="fw-bold text-danger">0</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card mb-3">
+            <div class="card-body" id="resumenCC">Cargando CC...</div>
+        </div>
+
+        <!-- 🔹 Gráficas -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <div class="card p-3 shadow-sm">
+                    <h6 class="fw-semibold text-center mb-2">Distribución por Riesgo</h6>
+                    <canvas id="graficaRiesgo" height="180"></canvas>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card p-3 shadow-sm">
+                    <h6 class="fw-semibold text-center mb-2">Distribución por Estatus</h6>
+                    <canvas id="graficaEstatus" height="180"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🔹 Tabla de folios -->
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="input-group" style="max-width: 360px;">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input id="buscarFolio" type="search" class="form-control"
+                            placeholder="Buscar por Folio CC, Tipo, Estatus...">
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Folio CC</th>
+                                <th>Folio</th>
+                                <th>Revisión</th>
+                                <th>Célula TI</th>
+                                <th>Tipo</th>
+                                <th>Estatus</th>
+                                <th>Categoría</th>
+                                <th>Riesgo</th>
+                                <th>Impacto</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaFolios">
+                            <tr>
+                                <td colspan="11" class="text-center py-4 text-muted">Cargando folios...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <div class="text-muted small" id="infoPaginacion"></div>
+                    <ul class="pagination mb-0" id="paginacion"></ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-3 mt-1">
+            <a href="/cc.html" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Volver a cc
+            </a>
+            <button id="btnExportarFolios" class="btn btn-outline-success">
+                <i class="bi bi-file-earmark-excel me-1"></i> Exportar CC + Folios
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal Folio -->
+    <!-- 🔹 MODAL: Agregar / Editar Folio -->
+    <div class="modal fade" id="modalFolio" tabindex="-1" aria-labelledby="modalFolioLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 id="modalFolioLabel" class="modal-title">Agregar / Editar Folio</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <!-- 🧩 FORMULARIO DE FOLIO -->
+                <form id="formFolio" class="p-3">
+                    <input type="hidden" id="folioId">
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Folio Jira</label>
+                            <input type="text" id="fFolio" class="form-control" placeholder="Ej. FOL-001" required>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Revisión</label>
+                            <select id="fRevision" class="form-select" required>
+                                <option value="">Seleccionar...</option>
+                                <option>Andrea</option>
+                                <option>Arturo</option>
+                                <option>Daniel</option>
+                                <option>Elihu</option>
+                                <option>Wenceslao</option>
+                                <option>Bernardo</option>
+                                <option>Ernesto</option>
+                                <option>Plinio</option>
+                                <option>Juan Manuel</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Célula TI</label>
+                            <select id="fCelula" class="form-select" required>
+                                <option value="">Seleccionar...</option>
+                                <option>App Finsus</option>
+                                <option>App Finsus/Core</option>
+                                <option>AO/Core</option>
+                                <option>Automatizaciones</option>
+                                <option>Web Banking</option>
+                                <option>Empresas</option>
+                                <option>Core</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Tipo</label>
+                            <select id="fTipo" class="form-select" required>
+                                <option value="">Seleccionar...</option>
+                                <option>INC</option>
+                                <option>NVO PRO</option>
+                                <option>REQ +</option>
+                                <option>REQ -</option>
+                                <option>REQ TEC</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Estatus</label>
+                            <select id="fEstatus" class="form-select" required>
+                                <option>Pendiente</option>
+                                <option>Por liberar</option>
+                                <option>Falta VoBo</option>
+                                <option>Cerrado</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Categoría del Cambio</label>
+                            <select id="fCategoria" class="form-select">
+                                <option>Requerimiento</option>
+                                <option>Incidencia</option>
+                                <option>Problema</option>
+                                <option>Liberacion</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Riesgo</label>
+                            <select id="fRiesgo" class="form-select">
+                                <option>Alto</option>
+                                <option>Medio</option>
+                                <option>Bajo</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Impacto</label>
+                            <select id="fImpacto" class="form-select">
+                                <option>Alto</option>
+                                <option>Medio</option>
+                                <option>Bajo</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">¿Afecta producción?</label>
+                            <select id="fAfecta" class="form-select">
+                                <option>Sí</option>
+                                <option>No</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">¿Tiene logs?</label>
+                            <select id="fLogs" class="form-select">
+                                <option>Sí</option>
+                                <option>No</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">¿Monitoreo en Grafana?</label>
+                            <select id="fGrafana" class="form-select">
+                                <option>Sí</option>
+                                <option>No</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">¿Monitoreo en Zabbix?</label>
+                            <select id="fZabbix" class="form-select">
+                                <option>Sí</option>
+                                <option>No</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Componentes</label>
+                            <input type="text" id="fComponentes" class="form-control"
+                                placeholder="Módulos o componentes afectados">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Duración Actividad</label>
+                            <input type="text" id="fDuracion" class="form-control" placeholder="Ej. 2h">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Tiempo Afectación Operativa</label>
+                            <input type="text" id="fAfectacion" class="form-control" placeholder="Ej. 30 min">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Team</label>
+                            <input type="text" id="fTeam" class="form-control" placeholder="Equipo responsable">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Estatus Control de Cambios</label>
+                            <select id="fEstatusCC" class="form-select">
+                                <option>Pendiente</option>
+                                <option>Cerrado</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Documentación Folio CC</label>
+                            <input type="text" id="fDocFolio" class="form-control"
+                                placeholder="URL o referencia de documentación">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Descripción</label>
+                            <textarea id="fDescripcion" class="form-control" rows="2"
+                                placeholder="Descripción detallada del cambio"></textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Comentarios</label>
+                            <textarea id="fComentarios" class="form-control" rows="2"
+                                placeholder="Comentarios adicionales"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-1"></i> Guardar Folio
+                        </button>
+                    </div>
+                </form>
+                <!-- 🧩 FIN FORMULARIO -->
+            </div>
+        </div>
+    </div>
+    <script type="module" src="/js/folios-cc.js"></script>
+    <script type="module">
+        import { loadNavbar } from './js/ui.js';
+        import { logout } from './js/auth.js';
+
+        window.logout = logout;
+        loadNavbar();
+    </script>
+    <script type="module" src="./js/firebase-config.js"></script>
+    <script type="module" src="./js/folios-cc.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

@@ -1,238 +1,294 @@
+<!-- /views/cc.html -->
 <!DOCTYPE html>
 <html lang="es">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cuentas de Prueba - QA Finsus</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Controles de Cambio | QA Finsus</title>
 
-    <link rel="stylesheet" href="vendor/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <!-- Bootstrap / Icons / SweetAlert / ChartJS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .header {
+            background: white;
+            border-bottom: 2px solid #e5e5e5;
+        }
+
+        .dashboard-card {
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .badge {
+            font-size: 0.85rem;
+        }
+    </style>
 </head>
 
 <body>
-    <div class="main-content">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>Cuentas de Prueba</h2>
-            <button class="btn btn-primary" id="btnNuevaCuenta" data-bs-toggle="modal" data-bs-target="#modalCuenta">
-                <i class="bi bi-plus-lg"></i> Nueva Cuenta
-            </button>
+    <!-- 🔹 Encabezado global -->
+    <div id="globalHeader" class="header d-flex justify-content-between align-items-center px-3 py-2">
+        <div class="brand d-flex align-items-center gap-2">
+            <img src="images/LogoQA1.png" alt="Logo" style="width: 40px; height: 40px" />
+            <h5 class="mb-0 fw-bold" style="color: #23223f">QA Finsus</h5>
         </div>
 
-        <!-- Tabla -->
-        <div class="card border-0 shadow-sm">
+        <!-- Botón tareas -->
+        <div class="d-flex align-items-center gap-3">
+            <a href="tareas.html" class="btn btn-sm btn-primary d-flex align-items-center">
+                <i class="bi bi-check2-square me-1"></i> Tareas
+            </a>
+
+            <!-- Dropdown usuario -->
+            <div id="userInfo" class="dropdown">
+                <a href="#" class="d-block text-end text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+                    <span id="userName" class="fw-semibold"></span><br />
+                    <small id="userRole" class="text-muted"></small>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow">
+                    <li>
+                        <a class="dropdown-item" href="perfil.html"><i class="bi bi-person-circle me-2"></i>Perfil</a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="tareas.html"><i class="bi bi-list-task me-2"></i>Mis Tareas</a>
+                    </li>
+                    <li>
+                        <hr class="dropdown-divider" />
+                    </li>
+                    <li>
+                        <a class="dropdown-item text-danger" href="#" onclick="logout()">
+                            <i class="bi bi-box-arrow-right me-2"></i>Salir
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔹 Contenedor principal -->
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold text-primary mb-0">
+                <i class="bi bi-clipboard-check me-2"></i> Controles de Cambio
+            </h4>
+            <div class="d-flex gap-2">
+                <button id="btnExportarExcel" class="btn btn-outline-success">
+                    <i class="bi bi-file-earmark-excel me-1"></i> Exportar
+                </button>
+                <button id="btnNuevoCC" class="btn btn-primary d-none">
+                    <i class="bi bi-plus-lg me-1"></i> Nuevo CC
+                </button>
+            </div>
+        </div>
+
+        <!-- 🔸 Dashboard superior -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card dashboard-card text-center border-warning">
+                    <div class="card-body">
+                        <h6 class="text-muted">Pendientes</h6>
+                        <h3 id="ccPendientes" class="fw-bold text-warning">0</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card dashboard-card text-center border-success">
+                    <div class="card-body">
+                        <h6 class="text-muted">Cerrados</h6>
+                        <h3 id="ccCerrados" class="fw-bold text-success">0</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card dashboard-card text-center border-danger">
+                    <div class="card-body">
+                        <h6 class="text-muted">Riesgo Alto</h6>
+                        <h3 id="ccRiesgoAlto" class="fw-bold text-danger">0</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🔸 Gráficas -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-6">
+                <div class="card p-3 shadow-sm">
+                    <h6 class="fw-semibold text-center mb-2">Distribución por Riesgo</h6>
+                    <canvas id="graficaRiesgos" height="200"></canvas>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card p-3 shadow-sm">
+                    <h6 class="fw-semibold text-center mb-2">Distribución por Estatus</h6>
+                    <canvas id="graficaEstatus" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🔸 Tabla de CC -->
+        <div class="card shadow-sm">
             <div class="card-body">
-                <div class="table table-responsive-xl">
-                    <table class="table table-hover align-middle" id="tablaCuentas">
+                <h6 class="fw-bold text-secondary mb-3">
+                    <i class="bi bi-table me-2"></i>Listado de Controles de Cambio
+                </h6>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
                         <thead class="table-light">
                             <tr>
                                 <th>#</th>
-                                <th>Teléfono</th>
-                                <th>Correo</th>
+                                <th>Folio CC</th>
+                                <th>Solicitante</th>
+                                <th>Revisión</th>
+                                <th>Célula TI</th>
                                 <th>Tipo</th>
                                 <th>Estatus</th>
-                                <th>Saldo</th>
-                                <th>Inversiones</th>
-                                <th>TDD</th>
-                                <th>TDC</th>
-                                <th>TDCG</th>
-                                <th>Asignada</th>
-                                <th>Acciones</th>
+                                <th>Riesgo</th>
+                                <th>Impacto</th>
+                                <th>Creado por</th>
+                                <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody></tbody>
+                        <tbody id="tablaCC">
+                            <tr>
+                                <td colspan="11" class="text-center py-4 text-muted">
+                                    Cargando registros...
+                                </td>
+                            </tr>
+                        </tbody>
                     </table>
-                    <div class="d-flex justify-content-between align-items-center mt-3">
-                        <button id="prevPage" class="btn btn-outline-secondary btn-sm">
-                            <i class="bi bi-arrow-left"></i> Anterior
-                        </button>
-
-                        <span id="paginaActual" class="fw-semibold text-primary">Página 1</span>
-
-                        <button id="nextPage" class="btn btn-outline-secondary btn-sm">
-                            Siguiente <i class="bi bi-arrow-right"></i>
-                        </button>
-                    </div>
-
-                </div>
-            </div>
-        </div>
-
-
-        <!-- Modal Nueva / Editar Cuenta -->
-        <div class="modal fade" id="modalCuenta" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Registrar / Editar Cuenta</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="formCuenta" class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Teléfono</label>
-                                <input type="text" id="telefonoCuenta" class="form-control" readonly>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Correo</label>
-                                <input type="email" id="correoCuenta" class="form-control">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Tipo de Cuenta</label>
-                                <select id="tipoCuenta" class="form-control" required>
-                                    <option value="">Seleccionar...</option>
-                                    <option value="N0">N 0</option>
-                                    <option value="N1">N 1</option>
-                                    <option value="N2">N 2</option>
-                                    <option value="N3">N 3</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Estatus</label>
-                                <select id="estatusCuenta" class="form-control" required>
-                                    <option value="Activa">Activa</option>
-                                    <option value="Pendiente">Pendiente</option>
-                                    <option value="Baja">Baja</option>
-                                    <option value="PLD">PLD</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Saldo</label>
-                                <input type="number" id="saldoCuenta" class="form-control" value="0">
-                            </div>
-                            <div class="raw">
-                                <hr class="solid">
-                            </div>
-                            <h6 class=" fw-bold text-primary">
-                                <i class="bi bi-sliders me-1"></i> Características de la cuenta
-                            </h6>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <ul class="list-group">
-                                        <li class="list-group-item">
-                                            <input class="form-check-input ml-1" type="checkbox" id="invCuenta">
-                                            <label class="form-check-label fw-semibold text-secondary ml-1"
-                                                for="invCuenta">
-                                                Inversiones
-                                            </label>
-                                        </li>
-                                        <li class="list-group-item">
-                                            <input class="form-check-input ml-1" type="checkbox" id="tddCuenta">
-                                            <label class="form-check-label fw-semibold text-secondary ml-1"
-                                                for="tddCuenta">
-                                                TDD
-                                            </label>
-                                        </li>
-                                    </ul>
-                                </div>
-                                <div class="col-md-6">
-                                    <ul class="list-group">
-                                        <li class="list-group-item">
-                                            <input class="form-check-input ml-1" type="checkbox" id="tdcCuenta">
-                                            <label class="form-check-label fw-semibold text-secondary ml-1"
-                                                for="tdcCuenta"></label>
-                                            TDC
-                                            </label>
-                                        </li>
-                                        <li class="list-group-item">
-                                            <input class="form-check-input ml-1" type="checkbox" id="tdcgCuenta">
-                                            <label class="form-check-label fw-semibold text-secondary ml-1"
-                                                for="tdcgCuenta">
-                                                TDCG
-                                            </label>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <!-- Saldo -->
-                            <div class="col-md-4 mt-3">
-                                <label for="saldoCuenta" class="form-label fw-semibold text-secondary">Saldo
-                                    inicial</label>
-                                <input type="number" class="form-control" id="saldoCuenta" placeholder="Ej. 5000"
-                                    min="0" />
-                            </div>
-                            <div class="col-12 text-end mt-4">
-                                <button type="submit" class="btn btn-primary w-100">
-                                    <i class="bi bi-save me-1"></i> Guardar cuenta
-                                </button>
-                            </div>
-                        </form>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal Asignar Usuario -->
-    <div class="modal fade" id="modalAsignar" tabindex="-1">
-        <div class="modal-dialog">
+    <!-- 🔹 Modal CC -->
+    <div class="modal fade" id="modalCC" tabindex="-1" aria-labelledby="modalCCLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Asignar Usuario Especial</h5>
+                <div class="modal-header bg-primary text-white">
+                    <h5 id="modalCCLabel" class="modal-title">Registrar Control de Cambio</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <form id="formAsignar" class="row g-2">
+                <form id="formCC" class="needs-validation p-3" novalidate>
+                    <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label">Nombre(s)</label>
-                            <input type="text" id="nombreAsignado" class="form-control" required>
+                            <label class="form-label fw-semibold">Solicitante</label>
+                            <input type="text" id="ccSolicitante" class="form-control" required />
                         </div>
+
                         <div class="col-md-6">
-                            <label class="form-label">Apellidos</label>
-                            <input type="text" id="apellidosAsignado" class="form-control" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Teléfono</label>
-                            <input type="text" id="telefonoAsignado" class="form-control" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Estatus</label>
-                            <select id="estatusAsignado" class="form-control">
-                                <option value="Activo">Activo</option>
-                                <option value="Inactivo">Inactivo</option>
+                            <label class="form-label fw-semibold">Revisión</label>
+                            <select id="ccRevision" class="form-select" required>
+                                <option value="">Seleccionar...</option>
+                                <option>Andrea</option>
+                                <option>Arturo</option>
+                                <option>Daniel</option>
+                                <option>Elihu</option>
+                                <option>Juan Manuel</option>
+                                <option>Wenceslao</option>
+                                <option>Bernardo</option>
+                                <option>Ernesto</option>
+                                <option>Plinio</option>
                             </select>
                         </div>
-                        <div class="col-12 text-end mt-3">
-                            <button type="submit" class="btn btn-primary w-100">Guardar</button>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Célula TI</label>
+                            <select id="ccCelula" class="form-select" required>
+                                <option value="">Seleccionar...</option>
+                                <option>App Finsus</option>
+                                <option>App Finsus/Core</option>
+                                <option>AO/Core</option>
+                                <option>Automatizaciones</option>
+                                <option>Web Banking</option>
+                                <option>Empresas</option>
+                                <option>Core</option>
+                            </select>
                         </div>
-                    </form>
-                </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tipo</label>
+                            <input type="text" id="ccTipo" class="form-control" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Folio CC</label>
+                            <input type="text" id="ccFolioCC" class="form-control" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Folio</label>
+                            <input type="text" id="ccFolio" class="form-control" />
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Descripción</label>
+                            <textarea id="ccDescripcion" class="form-control" rows="3"></textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Comentarios</label>
+                            <textarea id="ccComentarios" class="form-control" rows="2"></textarea>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Categoría del Cambio</label>
+                            <select id="ccCategoria" class="form-select" required>
+                                <option>Requerimiento</option>
+                                <option>Incidencia</option>
+                                <option>Problema</option>
+                                <option>Liberación</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Riesgo</label>
+                            <select id="ccRiesgo" class="form-select" required>
+                                <option>Alto</option>
+                                <option>Medio</option>
+                                <option>Bajo</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Impacto</label>
+                            <select id="ccImpacto" class="form-select" required>
+                                <option>Alto</option>
+                                <option>Medio</option>
+                                <option>Bajo</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-1"></i> Guardar
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 
-    <!-- Modal Comentarios -->
-    <div class="modal fade" id="modalComentarios" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Comentarios de la Cuenta</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="historialComentarios" class="mb-3" style="max-height: 300px; overflow-y: auto;"></div>
-                    <textarea id="nuevoComentario" class="form-control" rows="3"
-                        placeholder="Escribe un comentario..."></textarea>
-                    <button id="btnAgregarComentario" class="btn btn-outline-primary w-100 mt-3">
-                        <i class="bi bi-chat-dots"></i> Agregar Comentario
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <!-- Scripts -->
     <script type="module">
         import { loadNavbar } from './js/ui.js';
         loadNavbar();
     </script>
-    <script type="module" src="./js/firebase-config.js"></script>
-    <script type="module" src="./js/cuentas.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="./cc.js"></script>
 </body>
 
 </html>
