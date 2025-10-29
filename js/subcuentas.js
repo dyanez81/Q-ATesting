@@ -67,7 +67,6 @@ function renderTabla() {
     const slice = data.slice(start, start + pageSize);
 
     tabla.innerHTML = slice.map((r, idx) => `
-    tabla.innerHTML = slice.map((r, idx) => 
     <tr>
         <td>${start + idx + 1}</td>
         <td><a href="${r.url}" target="_blank">${r.url}</a></td>
