@@ -28,7 +28,7 @@ const nombreCuentaEl = document.getElementById("nombreCuenta");
 
 // 🔹 Botón para regresar a la vista de contraseñas
 document.getElementById('btnRegresar')?.addEventListener('click', () => {
-  window.location.href = 'contrasenas.html';
+    window.location.href = 'contrasenas.html';
 });
 
 
@@ -67,27 +67,28 @@ function renderTabla() {
     const slice = data.slice(start, start + pageSize);
 
     tabla.innerHTML = slice.map((r, idx) => `
-    <tr>
-        <td>${start + idx + 1}</td>
-        <td><a href="${r.url}" target="_blank">${r.url}</a></td>
-        <td>${r.usuario || '-'}</td>
-        <td>${r.fechaRegistro || '-'}</td>
-        <td>${r.fechaCambio || '-'}</td>
-        <td class="text-center">
-        <a href="/subcuentas.html?id=${r.id}" class="btn btn-outline-primary btn-sm">
-            <i class="bi bi-people"></i> Ver
-        </a>
-        </td>
-        <td class="text-nowrap">
-        <button class="btn btn-sm btn-outline-primary" data-id="${r.id}" data-action="edit">
-            <i class="bi bi-pencil"></i>
-        </button>
-        <button class="btn btn-sm btn-outline-danger" data-id="${r.id}" data-action="delete">
-            <i class="bi bi-trash"></i>
-        </button>
-        </td>
-    </tr>
+        <tr>
+            <td>${start + idx + 1}</td>
+            <td><a href="${r.url}" target="_blank">${r.url}</a></td>
+            <td>${r.usuario || '-'}</td>
+            <td>${r.fechaRegistro || '-'}</td>
+            <td>${r.fechaCambio || '-'}</td>
+            <td class="text-center">
+            <a href="/subcuentas.html?id=${r.id}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-people"></i> Ver
+            </a>
+            </td>
+            <td class="text-nowrap">
+            <button class="btn btn-sm btn-outline-primary" data-id="${r.id}" data-action="edit">
+                <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" data-id="${r.id}" data-action="delete">
+                <i class="bi bi-trash"></i>
+            </button>
+            </td>
+        </tr>
 `).join('');
+
 
 
     infoPaginacionEl.textContent = `${total === 0 ? 0 : start + 1}-${Math.min(start + pageSize, total)} de ${total}`;
