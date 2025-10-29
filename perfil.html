@@ -68,6 +68,8 @@
     <!-- Scripts -->
     <script type="module">
         import { loadNavbar } from './js/ui.js';
+        import { logout } from './js/auth.js';
+        window.logout = logout;
         loadNavbar();
     </script>
 

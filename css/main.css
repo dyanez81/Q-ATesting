@@ -464,7 +464,7 @@ iframe {
     opacity: 1;
   }
 }
-/* Sidebar principal */
+/* Sidebar principal 
 .sidebar {
   position: fixed;
   top: 0;
@@ -480,7 +480,7 @@ iframe {
 }
 
 .sidebar.collapsed {
-  width: 70px;
+  width: 80px;
 }
 
 .sidebar-header {
@@ -552,3 +552,4 @@ iframe {
     margin-left: 0 !important;
   }
 }
+*/

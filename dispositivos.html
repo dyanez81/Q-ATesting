@@ -18,9 +18,6 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2>Gestión de Dispositivos</h2>
             <div class="d-flex gap-2">
-                <button id="btnExportarExcel" class="btn btn-outline-success mr-5">
-                    <i class="bi bi-file-earmark-excel"></i> Exportar a Excel
-                </button>
                 <button class="btn btn-primary" id="btnNuevo" data-bs-toggle="modal" data-bs-target="#modalDispositivo">
                     <i class="bi bi-plus-lg"></i> Nuevo Dispositivo
                 </button>
@@ -60,6 +57,11 @@
                     </div>
                 </div>
             </div>
+        </div>
+        <div class="d-flex gap-2">
+            <button id="btnExportarExcel" class="btn btn-outline-success mr-5">
+                <i class="bi bi-file-earmark-excel"></i> Exportar a Excel
+            </button>
         </div>
     </div>
 
@@ -132,6 +134,8 @@
     <!-- Scripts -->
     <script type="module">
         import { loadNavbar } from './js/ui.js';
+        import { logout } from './js/auth.js';
+        window.logout = logout;
         loadNavbar();
     </script>
 

@@ -230,7 +230,6 @@ async function cargarFolios() {
     }
 }
 
-
 // --- Agregar / Editar Folio ---
 // 🔧 Guardar folio: SIEMPRE sincroniza folioCC con el padre
 formFolio?.addEventListener('submit', async (e) => {
@@ -313,29 +312,76 @@ formFolio?.addEventListener('submit', async (e) => {
     }
 });
 
-
-
 tabla?.addEventListener('click', async (e) => {
     const btn = e.target.closest('button');
     if (!btn) return;
     const id = btn.dataset.id;
     const action = btn.dataset.action;
 
+    // 🗑️ Eliminar
     if (action === 'del') {
-        const ok = await Swal.fire({ icon: 'warning', title: '¿Eliminar folio?', text: 'Esta acción no se puede deshacer.', showCancelButton: true, confirmButtonText: 'Sí, eliminar' });
+        const ok = await Swal.fire({
+            icon: 'warning',
+            title: '¿Eliminar folio?',
+            text: 'Esta acción no se puede deshacer.',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar'
+        });
         if (!ok.isConfirmed) return;
 
         await deleteDoc(doc(db, 'nuevoCC', ccId, 'folios', id));
-
-        // 🧹 quitar local y refrescar
         foliosRows = foliosRows.filter(f => f.id !== id);
         aplicarFiltroPaginacion();
         actualizarGraficas();
-
-        await cargarFolios(); // asegurar consistencia
+        await cargarFolios();
         Swal.fire('Eliminado', 'El folio fue eliminado.', 'success');
     }
+
+    // ✏️ Editar
+    if (action === 'edit') {
+        try {
+            const docRef = doc(db, 'nuevoCC', ccId, 'folios', id);
+            const docSnap = await getDoc(docRef);
+            if (!docSnap.exists()) {
+                Swal.fire('Error', 'No se encontró el folio.', 'error');
+                return;
+            }
+            const data = docSnap.data();
+
+            // ✅ Cargar datos en el formulario
+            document.getElementById('folioId').value = id;
+            document.getElementById('fRevision').value = data.revision || '';
+            document.getElementById('fCelula').value = data.celulaTI || '';
+            document.getElementById('fEstatus').value = data.estatus || '';
+            document.getElementById('fTipo').value = data.tipo || '';
+            document.getElementById('fFolio').value = data.folio || '';
+            document.getElementById('fDescripcion').value = data.descripcion || '';
+            document.getElementById('fComentarios').value = data.comentarios || '';
+            document.getElementById('fCategoria').value = data.categoriaCambio || '';
+            document.getElementById('fRiesgo').value = data.riesgo || '';
+            document.getElementById('fImpacto').value = data.impacto || '';
+            document.getElementById('fAfecta').value = data.afectaProduccion ? 'Sí' : 'No';
+            document.getElementById('fLogs').value = data.tieneLogs ? 'Sí' : 'No';
+            document.getElementById('fGrafana').value = data.requiereMonitoreoGrafana ? 'Sí' : 'No';
+            document.getElementById('fZabbix').value = data.requiereMonitoreoZabbix ? 'Sí' : 'No';
+            document.getElementById('fComponentes').value = data.componentes || '';
+            document.getElementById('fDuracion').value = data.duracionActividad || '';
+            document.getElementById('fAfectacion').value = data.tiempoAfectacionOperativa || '';
+            document.getElementById('fTeam').value = data.team || '';
+            document.getElementById('fEstatusCC').value = data.estatusControlCambios || '';
+            document.getElementById('fDocFolio').value = data.documentacionFolioCC || '';
+
+            // ✅ Mostrar modal
+            const modal = new bootstrap.Modal(document.getElementById('modalFolio'));
+            modal.show();
+
+        } catch (err) {
+            console.error('❌ Error al cargar folio para editar:', err);
+            Swal.fire('Error', 'No se pudo cargar la información del folio.', 'error');
+        }
+    }
 });
+
 
 // --- Búsqueda ---
 buscarFolio?.addEventListener('input', e => {
@@ -354,3 +400,154 @@ onAuthStateChanged(auth, (user) => {
         cargarFolios(); // carga una vez
     }
 });
+
+// 📦 Exportar CC + Folios con formato visual
+document.getElementById("btnExportarFolios")?.addEventListener("click", async () => {
+    try {
+        Swal.fire({
+            title: "Generando Excel...",
+            text: "Por favor espera un momento.",
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading(),
+        });
+
+        const ccRef = doc(db, "nuevoCC", ccId);
+        const ccSnap = await getDoc(ccRef);
+        if (!ccSnap.exists()) {
+            Swal.close();
+            Swal.fire("Sin datos", "No existe el CC", "info");
+            return;
+        }
+
+        const cc = ccSnap.data();
+        const foliosSnap = await getDocs(collection(db, "nuevoCC", ccId, "folios"));
+
+        const formatoBool = (v) => (v ? "Sí" : "No");
+        const formatoFecha = (v) => {
+            try {
+                const dt = v?.toDate ? v.toDate() : v ? new Date(v) : null;
+                if (!dt) return "";
+                return `${String(dt.getDate()).padStart(2, "0")}/${String(dt.getMonth() + 1).padStart(
+                    2,
+                    "0"
+                )}/${dt.getFullYear()}`;
+            } catch {
+                return "";
+            }
+        };
+
+        // --- 🧩 Hoja CC (solo información principal) ---
+        const hojaCC = [
+            ["Campo", "Valor"],
+            ["Folio CC", cc.folioCC || ""],
+            ["Solicitante", cc.solicitante || ""],
+            ["UID", cc.uid || ""],
+            ["Fecha creación", formatoFecha(cc.fecha)],
+            ["Fecha cambio", formatoFecha(cc.fechaCambio)],
+            ["Revisión", cc.revision || ""],
+            ["Célula TI", cc.celulaTI || ""],
+            ["Tipo", cc.tipo || ""],
+            ["Estatus CC", cc.estatusCC || ""],
+        ];
+
+        const wsCC = XLSX.utils.aoa_to_sheet(hojaCC);
+
+        // --- 🧩 Hoja Folios (todos los folios del CC) ---
+        const hojaFolios = [
+            [
+                "Folio CC",
+                "Folio",
+                "Revisión",
+                "Célula TI",
+                "Tipo",
+                "Estatus",
+                "Categoría del Cambio",
+                "Riesgo",
+                "Impacto",
+                "Afecta Producción",
+                "Tiene Logs",
+                "Monitoreo Grafana",
+                "Monitoreo Zabbix",
+                "Componentes",
+                "Duración Actividad",
+                "Tiempo Afectación Operativa",
+                "Team",
+                "Estatus Control de Cambios",
+                "Documentación Folio CC",
+            ],
+        ];
+
+        foliosSnap.forEach((d) => {
+            const f = d.data();
+            hojaFolios.push([
+                f.folioCC || "",
+                f.folio || "",
+                f.revision || "",
+                f.celulaTI || "",
+                f.tipo || "",
+                f.estatus || "",
+                f.categoriaCambio || "",
+                f.riesgo || "",
+                f.impacto || "",
+                formatoBool(f.afectaProduccion),
+                formatoBool(f.tieneLogs),
+                formatoBool(f.requiereMonitoreoGrafana),
+                formatoBool(f.requiereMonitoreoZabbix),
+                f.componentes || "",
+                f.duracionActividad || "",
+                f.tiempoAfectacionOperativa || "",
+                f.team || "",
+                f.estatusControlCambios || "",
+                f.documentacionFolioCC || "",
+            ]);
+        });
+
+        const wsFolios = XLSX.utils.aoa_to_sheet(hojaFolios);
+
+        // --- 🎨 Formato visual de encabezado ---
+        const encabezadoStyle = {
+            font: { bold: true, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: "1F4E78" } },
+            alignment: { horizontal: "center", vertical: "center", wrapText: true },
+        };
+
+        // Aplica formato a la primera fila (encabezado)
+        const rango = XLSX.utils.decode_range(wsFolios["!ref"]);
+        for (let C = rango.s.c; C <= rango.e.c; ++C) {
+            const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
+            if (!wsFolios[cellAddress]) continue;
+            wsFolios[cellAddress].s = encabezadoStyle;
+        }
+
+        // Ajuste automático de ancho de columnas
+        const colWidths = hojaFolios[0].map((_, i) => {
+            const maxLen = hojaFolios.reduce(
+                (max, row) => Math.max(max, (row[i] ? row[i].toString().length : 0)),
+                10
+            );
+            return { wch: Math.min(maxLen + 4, 50) }; // ancho máximo razonable
+        });
+        wsFolios["!cols"] = colWidths;
+
+        // --- 📘 Crear y guardar archivo ---
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, wsCC, "CC");
+        XLSX.utils.book_append_sheet(wb, wsFolios, "Folios");
+
+        const fecha = new Date();
+        const nombreArchivo = `CC_${cc.folioCC || ccId}_${fecha.getFullYear()}-${String(
+            fecha.getMonth() + 1
+        ).padStart(2, "0")}-${String(fecha.getDate()).padStart(2, "0")}.xlsx`;
+
+        // ✅ Exporta con formato
+        XLSX.writeFile(wb, nombreArchivo, { cellStyles: true });
+
+        Swal.close();
+        Swal.fire("Descargado", "El archivo Excel fue generado correctamente.", "success");
+    } catch (err) {
+        console.error("❌ Error exportando Excel:", err);
+        Swal.close();
+        Swal.fire("Error", "No se pudo generar el archivo Excel.", "error");
+    }
+});
+

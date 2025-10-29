@@ -97,10 +97,12 @@
         </div>
     </div>
 
-    <!-- Navbar loader -->
+    <!-- Scripts -->
     <script type="module">
         import { loadNavbar } from './js/ui.js';
-        await loadNavbar();
+        import { logout } from './js/auth.js';
+        window.logout = logout;
+        loadNavbar();
     </script>
 
     <!-- Scripts -->
