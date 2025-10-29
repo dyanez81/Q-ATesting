@@ -69,31 +69,34 @@ function renderTabla() {
     tabla.innerHTML = slice.map((r, idx) => `
         <tr>
             <td>${start + idx + 1}</td>
-            <td><a href="${r.url}" target="_blank">${r.url}</a></td>
+            <td>${r.nombre || '-'}</td>
+            <td>${r.correo || '-'}</td>
+            <td>${r.telefono || '-'}</td>
             <td>${r.usuario || '-'}</td>
-            <td>${r.fechaRegistro || '-'}</td>
-            <td>${r.fechaCambio || '-'}</td>
-            <td class="text-center">
-            <a href="/subcuentas.html?id=${r.id}" class="btn btn-outline-primary btn-sm">
-                <i class="bi bi-people"></i> Ver
-            </a>
+            <td>${r.rol || '-'}</td>
+            <td>
+                <span class="badge ${r.estatus === "Activo" ? "bg-success" : "bg-secondary"}">
+                    ${r.estatus || '-'}
+                </span>
             </td>
             <td class="text-nowrap">
-            <button class="btn btn-sm btn-outline-primary" data-id="${r.id}" data-action="edit">
-                <i class="bi bi-pencil"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-danger" data-id="${r.id}" data-action="delete">
-                <i class="bi bi-trash"></i>
-            </button>
+                <button class="btn btn-sm btn-outline-primary" data-id="${r.id}" data-action="edit">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" data-id="${r.id}" data-action="delete">
+                    <i class="bi bi-trash"></i>
+                </button>
             </td>
         </tr>
-`).join('');
+    `).join('');
 
-
+    if (total === 0) {
+        tabla.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted">Sin registros disponibles.</td></tr>`;
+    }
 
     infoPaginacionEl.textContent = `${total === 0 ? 0 : start + 1}-${Math.min(start + pageSize, total)} de ${total}`;
 
-    // Render paginación
+    // Paginación
     paginacionEl.innerHTML = "";
     const maxPages = Math.ceil(total / pageSize) || 1;
     for (let i = 1; i <= maxPages; i++) {
@@ -108,6 +111,7 @@ function renderTabla() {
         paginacionEl.appendChild(li);
     }
 }
+
 // --- Actualizar resumen de cards ---
 function actualizarCards() {
     const total = subcuentas.length;
