@@ -1,197 +1,166 @@
-import { db, auth } from './firebase-config.js';
+import { auth, db } from './firebase-config.js';
 import {
   collection,
-  query,
-  where,
-  getDocs,
-  limit,
-  orderBy
+  getDocs
 } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
 
-// Esperar a que window.currentUser esté disponible
-function waitForUser() {
-  return new Promise(resolve => {
-    const interval = setInterval(() => {
-      if (window.currentUser && window.currentUser.email) {
-        clearInterval(interval);
-        resolve(window.currentUser);
+let chartCasos = null;
+let chartBugs = null;
+
+// 📊 Totales generales
+async function cargarTotales() {
+  const appsSnap = await getDocs(collection(db, 'apps'));
+  const bugsSnap = await getDocs(collection(db, 'bugs'));
+  const usersSnap = await getDocs(collection(db, 'users'));
+  const dispositivosSnap = await getDocs(collection(db, 'dispositivos'));
+
+  const dispositivosOk = dispositivosSnap.docs.filter(d => d.data().estado !== 'Dañado').length;
+  const bugsAbiertos = bugsSnap.docs.filter(b => b.data().estado === 'Abierto').length;
+  const activos = usersSnap.docs.filter(u => u.data().status === 'Activo').length;
+
+  document.getElementById('totalApps').textContent = appsSnap.size;
+  document.getElementById('dispositivosOk').textContent = dispositivosOk;
+  document.getElementById('bugsAbiertos').textContent = bugsAbiertos;
+  document.getElementById('usuariosActivos').textContent = activos;
+}
+
+// 📈 Gráfico de Casos — recorre apps ➜ matrices ➜ casos
+async function generarGraficoCasos() {
+  const appsSnap = await getDocs(collection(db, 'apps'));
+  const resumen = {};
+  let totalCasos = 0;
+
+  // 🔁 Recorrer app ➜ módulo ➜ matrices ➜ casos
+  for (const appDoc of appsSnap.docs) {
+    const modulosRef = collection(db, `apps/${appDoc.id}/modulos`);
+    const modulosSnap = await getDocs(modulosRef);
+
+    for (const moduloDoc of modulosSnap.docs) {
+      const matricesRef = collection(db, `apps/${appDoc.id}/modulos/${moduloDoc.id}/matrices`);
+      const matricesSnap = await getDocs(matricesRef);
+
+      for (const matrizDoc of matricesSnap.docs) {
+        const casosRef = collection(db, `apps/${appDoc.id}/modulos/${moduloDoc.id}/matrices/${matrizDoc.id}/casos`);
+        const casosSnap = await getDocs(casosRef);
+        totalCasos += casosSnap.size;
       }
-    }, 300);
+    }
+  }
+
+  
+  const labels = Object.keys(resumen);
+  const data = Object.values(resumen);
+  const noDataMsg = document.getElementById('noDataMsg');
+  const canvas = document.getElementById('chartCasos');
+
+  if (data.length === 0) {
+    canvas.classList.add('d-none');
+    noDataMsg.classList.remove('d-none');
+    return;
+  } else {
+    canvas.classList.remove('d-none');
+    noDataMsg.classList.add('d-none');
+  }
+
+  const ctx = canvas.getContext('2d');
+  if (chartCasos) chartCasos.destroy();
+
+  chartCasos = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6c757d'],
+        borderColor: '#A3D3F5',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' },
+        title: { display: false }
+      }
+    }
   });
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-  const proyectosActivosEl = document.getElementById('proyectosActivos');
-  const bugsAbiertosEl = document.getElementById('bugsAbiertos');
-  const casosAprobadosEl = document.getElementById('casosAprobados');
-  const usuariosActivosEl = document.getElementById('usuariosActivos');
-  const tablaProyectosBody = document.querySelector('#tablaProyectos tbody');
-  const chartCanvas = document.getElementById('chartEstatus');
-  const refreshBtn = document.getElementById('refreshBtn');
 
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) return;
-    const current = await waitForUser();
-    await refrescarDashboard(user, current);
+// 📊 Gráfico de Bugs
+async function generarGraficoBugs() {
+  const bugsSnap = await getDocs(collection(db, 'bugs'));
+  const conteo = {};
+
+  bugsSnap.forEach((b) => {
+    const estado = b.data().estado || 'Desconocido';
+    conteo[estado] = (conteo[estado] || 0) + 1;
   });
 
-  // 🔁 Botón para actualizar datos sin recargar página
-  refreshBtn.addEventListener('click', async () => {
-    const user = auth.currentUser;
-    if (!user) return;
-    const current = await waitForUser();
+  const labels = Object.keys(conteo);
+  const data = Object.values(conteo);
+  const ctx = document.getElementById('chartBugs').getContext('2d');
 
-    refreshBtn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Actualizando...`;
-    refreshBtn.disabled = true;
+  if (chartBugs) chartBugs.destroy();
 
-    await refrescarDashboard(user, current);
-
-    setTimeout(() => {
-      refreshBtn.innerHTML = `<i class="bi bi-arrow-clockwise"></i> Actualizar Datos`;
-      refreshBtn.disabled = false;
-    }, 1000);
-  });
-
-  // ======================================
-  // 🔹 Función principal para actualizar dashboard
-  // ======================================
-  async function refrescarDashboard(user, current) {
-    try {
-      // 1️⃣ Proyectos activos
-      const matricesQ = query(collection(db, 'matrices'), where('tester', '==', user.email));
-      const matricesSnap = await getDocs(matricesQ);
-      proyectosActivosEl.textContent = matricesSnap.size || 0;
-
-      // 2️⃣ Bugs abiertos
-      const bugsQ = query(collection(db, 'bugs'), where('estatus', 'in', ['Abierto', 'En progreso']));
-      const bugsSnap = await getDocs(bugsQ);
-      bugsAbiertosEl.textContent = bugsSnap.size || 0;
-
-      // 3️⃣ Casos aprobados
-      const casosQ = query(collection(db, 'casos'), where('estatus', '==', 'Positivo'));
-      const casosSnap = await getDocs(casosQ);
-      casosAprobadosEl.textContent = casosSnap.size || 0;
-
-      // 4️⃣ Usuarios activos
-      if (current.role === 'Admin') {
-        const usersSnap = await getDocs(collection(db, 'users'));
-        const activos = usersSnap.docs.filter(d => d.data().status === 'Activo').length;
-        usuariosActivosEl.textContent = activos;
-      } else {
-        usuariosActivosEl.textContent = '-';
+  chartBugs = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Cantidad de Bugs',
+        data,
+        backgroundColor: ['#dc3545', '#ffc107', '#0d6efd', '#198754', '#6c757d'],
+        borderColor: '#A3D3F5',
+        borderWidth: 2,
+        borderRadius: 6
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#23223F', titleColor: '#fff' }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { color: '#23223F', stepSize: 1 },
+          grid: { color: 'rgba(0,0,0,0.08)' }
+        },
+        x: {
+          ticks: { color: '#23223F' },
+          grid: { display: false }
+        }
       }
-
-      // 5️⃣ Proyectos recientes
-      await cargarProyectosRecientes(user.email, tablaProyectosBody);
-
-      // 6️⃣ Gráfico de casos
-      await generarGraficoCasos(chartCanvas);
-    } catch (error) {
-      console.error('❌ Error actualizando dashboard:', error);
     }
+  });
+}
+
+// 🔁 Cargar Dashboard completo
+async function cargarDashboard() {
+  Swal.showLoading();
+  await cargarTotales();
+  await generarGraficoCasos();
+  await generarGraficoBugs();
+  Swal.close();
+}
+
+// 🚀 Inicio
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Sesión expirada',
+      text: 'Por favor inicia sesión nuevamente.',
+      confirmButtonColor: '#23223F'
+    }).then(() => (window.location.href = 'index.html'));
+  } else {
+    cargarDashboard();
   }
 });
 
-// ==========================
-// 🧩 Función: Proyectos recientes
-// ==========================
-async function cargarProyectosRecientes(email, tablaBody) {
-  try {
-    const q = query(
-      collection(db, 'matrices'),
-      where('tester', '==', email),
-      orderBy('createdAt', 'desc'),
-      limit(5)
-    );
-    const snapshot = await getDocs(q);
+document.getElementById('refreshBtn').addEventListener('click', cargarDashboard);
 
-    tablaBody.innerHTML = '';
-    if (snapshot.empty) {
-      tablaBody.innerHTML = `
-        <tr><td colspan="6" class="text-center text-muted">No hay proyectos recientes</td></tr>`;
-      return;
-    }
-
-    let index = 1;
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      const avance = calcularAvance();
-      const estado = `<span class="badge bg-${avance < 30 ? 'warning text-dark' : avance < 70 ? 'info' : 'success'
-        }">
-        ${avance < 30 ? 'Pendiente' : avance < 70 ? 'En curso' : 'Completado'}
-      </span>`;
-
-      const row = `
-        <tr>
-          <td>${index++}</td>
-          <td>${data.nombre || 'Sin nombre'}</td>
-          <td>${estado}</td>
-          <td>${data.bugsCount || 0}</td>
-          <td>
-            <div class="progress" style="height: 8px;">
-              <div class="progress-bar bg-${avance < 30 ? 'warning' : avance < 70 ? 'info' : 'success'
-        }" style="width: ${avance}%"></div>
-            </div>
-          </td>
-          <td>
-            <a href="casos.html?id=${docSnap.id}&nombre=${encodeURIComponent(data.nombre)}"
-               class="btn btn-sm btn-outline-primary">Ver</a>
-          </td>
-        </tr>`;
-      tablaBody.insertAdjacentHTML('beforeend', row);
-    });
-  } catch (error) {
-    console.error('❌ Error al cargar proyectos recientes:', error);
-  }
-}
-
-// Simulación temporal del % de avance
-function calcularAvance() {
-  return Math.floor(Math.random() * 100);
-}
-
-// ==========================
-// 📊 Generar gráfico dinámico
-// ==========================
-async function generarGraficoCasos(canvas) {
-  try {
-    const snapshot = await getDocs(collection(db, 'casos'));
-    if (snapshot.empty) return;
-
-    const conteo = {
-      Positivo: 0,
-      Fallo: 0,
-      Bloqueado: 0,
-      Pendiente: 0,
-      'N/A': 0
-    };
-
-    snapshot.forEach(doc => {
-      const estatus = doc.data().estatus || 'Pendiente';
-      if (conteo[estatus] !== undefined) conteo[estatus]++;
-    });
-
-    const labels = Object.keys(conteo);
-    const data = Object.values(conteo);
-    const backgroundColors = ['#28a745', '#dc3545', '#ffc107', '#0d6efd', '#6c757d'];
-
-    if (window.chartInstance) window.chartInstance.destroy();
-
-    window.chartInstance = new Chart(canvas, {
-      type: 'doughnut',
-      data: {
-        labels,
-        datasets: [{ data, backgroundColor: backgroundColors, borderWidth: 1 }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { position: 'bottom', labels: { font: { size: 14 } } }
-        }
-      }
-    });
-  } catch (error) {
-    console.error('❌ Error generando gráfico:', error);
-  }
-}

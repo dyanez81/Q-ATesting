@@ -2,7 +2,7 @@
 import { auth, db } from './firebase-config.js';
 import { logout } from './auth.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
-import { doc, getDoc, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
+import { doc, getDoc, onSnapshot, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
 
 export async function loadNavbar() {
   try {
@@ -149,21 +149,34 @@ export async function loadNavbar() {
 }
 
 // ---------- Contador de tareas ----------
-export async function actualizarContadorTareas() {
-  onAuthStateChanged(auth, async (user) => {
+// 🔹 Contador de tareas pendientes y en progreso
+// 🔹 Contador en tiempo real de tareas Pendientes / En progreso
+export function actualizarContadorTareas() {
+  onAuthStateChanged(auth, (user) => {
     const badge = document.getElementById('taskCountBadge');
     if (!user || !badge) return;
+
     try {
       const tareasRef = collection(db, `users/${user.uid}/tareas`);
-      const q = query(tareasRef, where('estado', '==', 'Pendiente'));
-      const snapshot = await getDocs(q);
-      badge.textContent = snapshot.size > 0 ? snapshot.size : '';
-      badge.style.display = snapshot.size > 0 ? 'inline' : 'none';
+      const q = query(tareasRef, where('estado', 'in', ['Pendiente', 'En progreso']));
+
+      // 🟢 Escucha en tiempo real
+      onSnapshot(q, (snapshot) => {
+        const count = snapshot.size;
+
+        if (count > 0) {
+          badge.textContent = count;
+          badge.style.display = 'inline';
+        } else {
+          badge.style.display = 'none';
+        }
+      });
     } catch (error) {
-      console.error('Error al obtener tareas:', error);
+      console.error('❌ Error al escuchar tareas:', error);
     }
   });
 }
+
 
 if (document.readyState !== 'loading') actualizarContadorTareas();
 else document.addEventListener('DOMContentLoaded', actualizarContadorTareas);

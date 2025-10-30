@@ -1,6 +1,3 @@
-
-
-
 .sidebar a {
   display: none;
 }
@@ -11,83 +8,90 @@
 
 @font-face {
   font-family: Poppins-Regular;
-  src: url('../fonts/poppins/Poppins-Regular.ttf'); 
+  src: url('../fonts/poppins/Poppins-Regular.ttf');
 }
 
 @font-face {
   font-family: Poppins-Bold;
-  src: url('../fonts/poppins/Poppins-Bold.ttf'); 
+  src: url('../fonts/poppins/Poppins-Bold.ttf');
 }
 
 @font-face {
   font-family: Poppins-Medium;
-  src: url('../fonts/poppins/Poppins-Medium.ttf'); 
+  src: url('../fonts/poppins/Poppins-Medium.ttf');
 }
 
 @font-face {
   font-family: Montserrat-Bold;
-  src: url('../fonts/montserrat/Montserrat-Bold.ttf'); 
+  src: url('../fonts/montserrat/Montserrat-Bold.ttf');
 }
 
 /*//////////////////////////////////////////////////////////////////
 [ RESTYLE TAG ]*/
 
 * {
-	margin: 0px; 
-	padding: 0px; 
-	box-sizing: border-box;
+  margin: 0px;
+  padding: 0px;
+  box-sizing: border-box;
 }
 
-body, html {
-	height: 100%;
-	font-family: Poppins-Regular, sans-serif;
+body,
+html {
+  height: 100%;
+  font-family: Poppins-Regular, sans-serif;
 }
 
 /*---------------------------------------------*/
 a {
-	font-family: Poppins-Regular;
-	font-size: 14px;
-	line-height: 1.7;
-	color: #666666;
-	margin: 0px;
-	transition: all 0.4s;
-	-webkit-transition: all 0.4s;
+  font-family: Poppins-Regular;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #666666;
+  margin: 0px;
+  transition: all 0.4s;
+  -webkit-transition: all 0.4s;
   -o-transition: all 0.4s;
   -moz-transition: all 0.4s;
 }
 
 a:focus {
-	outline: none !important;
+  outline: none !important;
 }
 
 a:hover {
-	text-decoration: none;
+  text-decoration: none;
   color: #23223F;
 }
 
 /*---------------------------------------------*/
-h1,h2,h3,h4,h5,h6 {
-	margin: 0px;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0px;
 }
 
 p {
-	font-family: Poppins-Regular;
-	font-size: 18px;
-	line-height: 1.7;
-	color: #666666;
-	margin: 0px;
+  font-family: Poppins-Regular;
+  font-size: 18px;
+  line-height: 1.7;
+  color: #666666;
+  margin: 0px;
 }
 
-ul, li {
-	margin: 0px;
-	list-style-type: none;
+ul,
+li {
+  margin: 0px;
+  list-style-type: none;
 }
 
 
 /*---------------------------------------------*/
 input {
-	outline: none;
-	border: none;
+  outline: none;
+  border: none;
 }
 
 textarea {
@@ -95,43 +99,88 @@ textarea {
   border: none;
 }
 
-textarea:focus, input:focus {
+textarea:focus,
+input:focus {
   border-color: transparent !important;
 }
 
-input:focus::-webkit-input-placeholder { color:transparent; }
-input:focus:-moz-placeholder { color:transparent; }
-input:focus::-moz-placeholder { color:transparent; }
-input:focus:-ms-input-placeholder { color:transparent; }
+input:focus::-webkit-input-placeholder {
+  color: transparent;
+}
 
-textarea:focus::-webkit-input-placeholder { color:transparent; }
-textarea:focus:-moz-placeholder { color:transparent; }
-textarea:focus::-moz-placeholder { color:transparent; }
-textarea:focus:-ms-input-placeholder { color:transparent; }
+input:focus:-moz-placeholder {
+  color: transparent;
+}
 
-input::-webkit-input-placeholder { color: #999999; }
-input:-moz-placeholder { color: #999999; }
-input::-moz-placeholder { color: #999999; }
-input:-ms-input-placeholder { color: #999999; }
+input:focus::-moz-placeholder {
+  color: transparent;
+}
 
-textarea::-webkit-input-placeholder { color: #999999; }
-textarea:-moz-placeholder { color: #999999; }
-textarea::-moz-placeholder { color: #999999; }
-textarea:-ms-input-placeholder { color: #999999; }
+input:focus:-ms-input-placeholder {
+  color: transparent;
+}
+
+textarea:focus::-webkit-input-placeholder {
+  color: transparent;
+}
+
+textarea:focus:-moz-placeholder {
+  color: transparent;
+}
+
+textarea:focus::-moz-placeholder {
+  color: transparent;
+}
+
+textarea:focus:-ms-input-placeholder {
+  color: transparent;
+}
+
+input::-webkit-input-placeholder {
+  color: #999999;
+}
+
+input:-moz-placeholder {
+  color: #999999;
+}
+
+input::-moz-placeholder {
+  color: #999999;
+}
+
+input:-ms-input-placeholder {
+  color: #999999;
+}
+
+textarea::-webkit-input-placeholder {
+  color: #999999;
+}
+
+textarea:-moz-placeholder {
+  color: #999999;
+}
+
+textarea::-moz-placeholder {
+  color: #999999;
+}
+
+textarea:-ms-input-placeholder {
+  color: #999999;
+}
 
 /*---------------------------------------------*/
 button {
-	outline: none !important;
-	border: none;
-	background: transparent;
+  outline: none !important;
+  border: none;
+  background: transparent;
 }
 
 button:hover {
-	cursor: pointer;
+  cursor: pointer;
 }
 
 iframe {
-	border: none !important;
+  border: none !important;
 }
 
 
@@ -161,7 +210,7 @@ iframe {
 }
 
 .container-login100 {
-  width: 100%;  
+  width: 100%;
   min-height: 100vh;
   display: -webkit-box;
   display: -webkit-flex;
@@ -260,10 +309,10 @@ iframe {
   width: 100%;
   height: 100%;
   box-shadow: 0px 0px 0px 0px;
-  color:  #23223F;
+  color: #23223F;
 }
 
-.input100:focus + .focus-input100 {
+.input100:focus+.focus-input100 {
   -webkit-animation: anim-shadow 0.5s ease-in-out forwards;
   animation: anim-shadow 0.5s ease-in-out forwards;
 }
@@ -307,8 +356,8 @@ iframe {
   transition: all 0.4s;
 }
 
-.input100:focus + .focus-input100 + .symbol-input100 {
-  color:  #23223F;
+.input100:focus+.focus-input100+.symbol-input100 {
+  color: #23223F;
   padding-left: 28px;
 }
 
@@ -464,6 +513,131 @@ iframe {
     opacity: 1;
   }
 }
+
+.swal-wide {
+  width: 650px !important;
+  max-width: 95vw;
+}
+
+.swal2-select,
+.swal2-input,
+.swal2-textarea {
+  border: 1px solid #ccc !important;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.swal2-select:focus,
+.swal2-input:focus,
+.swal2-textarea:focus {
+  border-color: #179DE9 !important;
+  box-shadow: 0 0 0 2px rgba(23, 157, 233, 0.3);
+}
+
+#taskCountBadge {
+  transform: translate(-40%, -40%) !important;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* 🎨 Bordes personalizados para TODAS las tablas del sistema */
+.table {
+  border-collapse: collapse !important;
+  border: 2px solid #179DE9 !important;
+  /* Borde exterior azul */
+  border-radius: 10px;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* 🟦 Bordes internos visibles */
+.table th,
+.table td {
+  border: 1px solid rgba(23, 157, 233, 0.5) !important;
+  /* Azul semitransparente */
+  vertical-align: middle;
+  text-align: center;
+}
+
+/* 🔹 Encabezado más definido */
+.table thead th {
+  background-color: #23223F !important;
+  /* Azul oscuro Finsus */
+  color: white !important;
+  border-color: #179DE9 !important;
+  font-weight: 600;
+}
+
+/* 🟢 Hover elegante en filas */
+.table-hover tbody tr:hover {
+  background-color: rgba(23, 157, 233, 0.1) !important;
+  transition: background-color 0.2s ease;
+}
+
+/* 🟣 Bordes suaves en celdas redondeadas */
+.table tr:first-child th:first-child {
+  border-top-left-radius: 10px;
+}
+
+.table tr:first-child th:last-child {
+  border-top-right-radius: 10px;
+}
+
+.table tr:last-child td:first-child {
+  border-bottom-left-radius: 10px;
+}
+
+.table tr:last-child td:last-child {
+  border-bottom-right-radius: 10px;
+}
+/* 🎨 Estilo general para los contenedores de perfil */
+.perfil-container,
+.card-perfil,
+.card-perfil-info,
+.card-perfil-settings {
+  border: 2px solid #179DE9 !important;
+  border-radius: 12px;
+  padding: 20px;
+  background-color: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+/* 💡 Efecto hover sutil */
+.perfil-container:hover,
+.card-perfil:hover,
+.card-perfil-info:hover,
+.card-perfil-settings:hover {
+  box-shadow: 0 6px 15px rgba(23, 157, 233, 0.25);
+  transform: translateY(-2px);
+}
+
+/* 🟦 Encabezados del perfil */
+.perfil-container h5,
+.card-perfil h5 {
+  color: #23223F;
+  font-weight: 600;
+  border-bottom: 2px solid #179DE9;
+  padding-bottom: 8px;
+  margin-bottom: 15px;
+}
+
+/* 🧩 Para secciones con fondo gris o modo oscuro */
+.bg-light .perfil-container,
+.bg-light .card-perfil {
+  background-color: #f8f9fa;
+}
+
+.bg-dark .perfil-container,
+.bg-dark .card-perfil {
+  background-color: #1e1e2f;
+  border-color: #4fc3f7;
+  color: #eaeaea;
+}
+
+
 /* Sidebar principal 
 .sidebar {
   position: fixed;

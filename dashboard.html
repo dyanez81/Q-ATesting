@@ -2,29 +2,81 @@
 <html lang="es">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard QA</title>
 
-  <link rel="stylesheet" href="vendor/bootstrap/css/bootstrap.min.css" />
-  <link rel="stylesheet" href="css/main.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="vendor/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
   <style>
+    /* 🎨 Estilo general */
+    .main-content {
+      padding: 20px;
+    }
+
     .card-icon {
       font-size: 2rem;
-      color: #23223F
+      color: #23223F;
     }
 
-    #chartEstatus {
-      max-width: 550px;
-      margin: 0 auto
+    /* 💠 Bordes azul tenue */
+    .card {
+      border: 2px solid #A3D3F5 !important;
+      border-radius: 12px !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
     }
 
-    .main-content {
-      padding: 20px
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 12px rgba(23, 157, 233, 0.15);
+    }
+
+    /* 📊 Canvas con bordes suaves */
+    canvas {
+      border: 2px solid #A3D3F5;
+      border-radius: 10px;
+      background-color: #fff;
+      padding: 8px;
+    }
+
+    h5.text-center {
+      color: #23223F;
+      font-weight: 600;
+    }
+
+    /* 🧩 Contenedor doble para gráficas */
+    .dual-chart-container {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .chart-card {
+      flex: 1;
+      min-width: 300px;
+      max-width: 48%;
+      border: 2px solid #A3D3F5 !important;
+      border-radius: 12px;
+      padding: 20px;
+      background-color: #ffffff;
+    }
+
+    .chart-container {
+      height: 280px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #noDataMsg {
+      color: #888;
+      font-style: italic;
     }
   </style>
 </head>
@@ -44,64 +96,54 @@
       </div>
     </div>
 
-    <!-- 📊 Tarjetas de métricas -->
-    <div class="row g-4 mb-4">
+    <!-- 📊 Tarjetas -->
+    <div class="row g-4 mb-5">
       <div class="col-md-3">
-        <div class="card shadow-sm border-0 text-center p-3">
-          <i class="bi bi-folder card-icon"></i>
-          <h5 class="mt-3">Apps Registradas</h5>
+        <div class="card text-center p-3">
+          <i class="bi bi-folder card-icon text-primary"></i>
+          <h5 class="mt-3">Aplicaciones Registradas</h5>
           <p class="fs-4 fw-bold text-primary" id="totalApps">0</p>
         </div>
       </div>
       <div class="col-md-3">
-        <div class="card shadow-sm border-0 text-center p-3">
-          <i class="bi bi-bug card-icon"></i>
+        <div class="card text-center p-3">
+          <i class="bi bi-phone card-icon text-success"></i>
+          <h5 class="mt-3">Dispositivos Funcionales</h5>
+          <p class="fs-4 fw-bold text-success" id="dispositivosOk">0</p>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center p-3">
+          <i class="bi bi-bug card-icon text-danger"></i>
           <h5 class="mt-3">Bugs Abiertos</h5>
           <p class="fs-4 fw-bold text-danger" id="bugsAbiertos">0</p>
         </div>
       </div>
       <div class="col-md-3">
-        <div class="card shadow-sm border-0 text-center p-3">
-          <i class="bi bi-check2-circle card-icon"></i>
-          <h5 class="mt-3">Casos Aprobados</h5>
-          <p class="fs-4 fw-bold text-success" id="casosAprobados">0</p>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="card shadow-sm border-0 text-center p-3">
-          <i class="bi bi-people card-icon"></i>
+        <div class="card text-center p-3">
+          <i class="bi bi-people card-icon text-secondary"></i>
           <h5 class="mt-3">Usuarios Activos</h5>
           <p class="fs-4 fw-bold text-secondary" id="usuariosActivos">0</p>
         </div>
       </div>
     </div>
 
-    <!-- 📈 Gráfico -->
-    <div class="card shadow-sm border-0 p-4 mb-5">
-      <h5 class="mb-3 text-center"><i class="bi bi-pie-chart me-2 mr-2"></i>Resumen de Casos</h5>
-      <canvas id="chartEstatus" height="120"></canvas>
-    </div>
-
-    <!-- 📋 Tabla de Apps -->
-    <div class="card border-0 shadow-sm">
-      <div class="card-header bg-white">
-        <h5 class="mb-0"><i class="bi bi-folder2-open me-2 mr-2"></i>Aplicaciones Registradas</h5>
+    <!-- 📊 Gráficas lado a lado -->
+    <div class="dual-chart-container mb-4">
+      <!-- Resumen de Casos -->
+      <div class="chart-card shadow-sm">
+        <h5 class="text-center mb-3"><i class="bi bi-graph-up-arrow me-2"></i> Resumen de Casos</h5>
+        <div class="chart-container">
+          <canvas id="chartCasos"></canvas>
+          <p id="noDataMsg" class="text-center d-none">No hay datos disponibles para mostrar.</p>
+        </div>
       </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle" id="tablaApps">
-            <thead class="table-light">
-              <tr>
-                <th>#</th>
-                <th>Nombre</th>
-                <th>Tipo</th>
-                <th>Tester Asignado</th>
-                <th>Requerimiento</th>
-                <th>Fecha Fin</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
+
+      <!-- Bugs por Estatus -->
+      <div class="chart-card shadow-sm">
+        <h5 class="text-center mb-3"><i class="bi bi-bar-chart-line me-2"></i> Bugs por Estatus</h5>
+        <div class="chart-container">
+          <canvas id="chartBugs"></canvas>
         </div>
       </div>
     </div>
@@ -110,128 +152,17 @@
   <!-- 🔧 Scripts -->
   <script type="module">
     import { loadNavbar } from './js/ui.js';
-    import { logout } from './js/auth.js';
-    import { auth, db } from './js/firebase-config.js';
-    import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
-    import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
 
     await loadNavbar();
     window.logout = logout;
 
-    const ctx = document.getElementById('chartEstatus');
-    let currentChart = null;
-
-    // --- 🔹 Renderizar gráfico dinámico ---
-    function renderChart(data) {
-      if (!ctx) return;
-      if (currentChart) currentChart.destroy();
-
-      currentChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: ['Pendiente', 'Positivo', 'Fallo', 'Bloqueado'],
-          datasets: [{
-            data: [data.pendiente, data.positivo, data.fallo, data.bloqueado],
-            backgroundColor: ['#ffc107', '#28a745', '#dc3545', '#6c757d']
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { position: 'bottom' } }
-        }
-      });
-    }
-
-    // --- 🔹 Obtener estadísticas reales desde Firestore ---
-    async function obtenerEstadisticas() {
-      let pendiente = 0, positivo = 0, fallo = 0, bloqueado = 0;
-
-      const appsSnap = await getDocs(collection(db, 'apps'));
-      for (const appDoc of appsSnap.docs) {
-        const modulosSnap = await getDocs(collection(db, `apps/${appDoc.id}/modulos`));
-        for (const moduloDoc of modulosSnap.docs) {
-          const matricesSnap = await getDocs(collection(db, `apps/${appDoc.id}/modulos/${moduloDoc.id}/matrices`));
-          for (const matrizDoc of matricesSnap.docs) {
-            const casosSnap = await getDocs(collection(db, `apps/${appDoc.id}/modulos/${moduloDoc.id}/matrices/${matrizDoc.id}/casos`));
-            casosSnap.forEach(caso => {
-              const estado = (caso.data().Estado || '').trim();
-              if (estado === 'Pendiente') pendiente++;
-              else if (estado === 'Positivo') positivo++;
-              else if (estado === 'Fallo') fallo++;
-              else if (estado === 'Bloqueado') bloqueado++;
-            });
-          }
-        }
-      }
-
-      return { pendiente, positivo, fallo, bloqueado };
-    }
-
-    // --- 🔹 Cargar Apps ---
-    async function cargarApps() {
-      const appsSnap = await getDocs(collection(db, 'apps'));
-      const tbody = document.querySelector('#tablaApps tbody');
-      tbody.innerHTML = '';
-      let i = 1;
-
-      appsSnap.forEach(docSnap => {
-        const d = docSnap.data();
-        const row = `
-        <tr>
-          <td>${i++}</td>
-          <td>${d.nombre || '-'}</td>
-          <td>${d.tipo || '-'}</td>
-          <td>${d.testerNombre || '-'}</td>
-          <td>${d.requerimiento || '-'}</td>
-          <td>${d.fechaFin || '-'}</td>
-        </tr>`;
-        tbody.insertAdjacentHTML('beforeend', row);
-      });
-
-      document.getElementById('totalApps').textContent = appsSnap.size;
-    }
-
-    // --- 🔹 Contar usuarios activos y bugs ---
-    async function cargarTotales() {
-      const usersSnap = await getDocs(collection(db, 'users'));
-      const activos = usersSnap.docs.filter(u => u.data().status === 'Activo').length;
-      document.getElementById('usuariosActivos').textContent = activos;
-
-      const bugsSnap = await getDocs(collection(db, 'bugs'));
-      const abiertos = bugsSnap.docs.filter(b => b.data().estado === 'Abierto').length;
-      document.getElementById('bugsAbiertos').textContent = abiertos;
-    }
-
-    // --- 🔹 Cargar Dashboard completo ---
-    async function cargarDashboard() {
-      Swal.showLoading();
-      await cargarApps();
-      await cargarTotales();
-      const estadisticas = await obtenerEstadisticas();
-      renderChart(estadisticas);
-      document.getElementById('casosAprobados').textContent = estadisticas.positivo;
-      Swal.close();
-    }
-
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        Swal.fire({
-          icon: 'warning',
-          title: 'Sesión expirada',
-          text: 'Por favor, inicia sesión nuevamente.',
-          confirmButtonColor: '#23223F'
-        }).then(() => window.location.href = 'index.html');
-      } else {
-        cargarDashboard();
-      }
-    });
+  
   </script>
 
   <!-- ✅ Scripts base del proyecto (importantes para otras vistas también) -->
   <script type="module" src="./js/firebase-config.js"></script>
   <script type="module" src="./js/auth.js"></script>
   <script type="module" src="./js/ui.js"></script>
-  <script type="module" src="./js/users.js"></script>
   <script type="module" src="./js/dashboard-user.js"></script>
 
   <!-- ✅ Solo mantenemos el bundle de Bootstrap clásico, no ESM -->
