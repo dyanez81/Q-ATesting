@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Requerimientos - QA Finsus</title>
+    <link rel="stylesheet" href="vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body>
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 id="tituloApp">Requerimientos</h2>
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalRequerimiento">
+                    <i class="bi bi-plus-lg"></i> Nuevo Requerimiento
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabla de requerimientos -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="tablaRequerimientos">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Folio</th>
+                                <th>Descripción</th>
+                                <th>Tester</th>
+                                <th>Estado</th>
+                                <th>Inicio</th>
+                                <th>Fin</th>
+                                <th>Tipo</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex align-items-end mb-4 mt-2">
+            <div class="d-flex gap-2">
+                <button id="btnVolver" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Nuevo / Editar Requerimiento -->
+    <div class="modal fade" id="modalRequerimiento" tabindex="-1" aria-labelledby="modalRequerimientoLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="formRequerimiento">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="modalRequerimientoLabel">Registrar Requerimiento</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Folio Jira</label>
+                            <input type="text" id="folio" class="form-control" required />
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Descripción</label>
+                            <input type="text" id="descripcion" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tester asignado</label>
+                            <select id="tester" class="form-control" required></select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Estado</label>
+                            <select id="estado" class="form-control">
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="En progreso">En progreso</option>
+                                <option value="Completado">Completado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha de inicio</label>
+                            <input type="date" id="fechaInicio" class="form-control" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha fin</label>
+                            <input type="date" id="fechaFin" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="col-md-6 d-flex justify-content-start align-items-start">
+                        <div class="form-check mt-3 ml-4">
+                            <input class="form-check-input" type="checkbox" id="miniMatrizCheck">
+                            <label class="form-check-label" for="miniMatrizCheck">
+                                Este requerimiento usa una Mini Matriz
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary w-100">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🆕 Modal Nueva Tarea -->
+    <div class="modal fade" id="modalTarea" tabindex="-1" aria-labelledby="modalTareaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="formTarea">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title" id="modalTareaLabel">Registrar Nueva Tarea</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Folio</label>
+                            <input type="text" id="folioTarea" class="form-control" required />
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Título</label>
+                            <input type="text" id="tituloTarea" class="form-control" required />
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Descripción</label>
+                            <textarea id="descripcionTarea" class="form-control" rows="3"></textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Prioridad</label>
+                            <select id="prioridadTarea" class="form-control">
+                                <option value=" Alta">Alta</option>
+                                <option value="Media">Media</option>
+                                <option value="Baja">Baja</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Estado</label>
+                            <select id="estadoTarea" class="form-control">
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="En progreso">En progreso</option>
+                                <option value="Completada">Completada</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Responsable</label>
+                            <select id="responsableTarea" class="form-control"></select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success w-100">Guardar Tarea</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { loadNavbar } from './js/ui.js';
+        import { logout } from './js/auth.js';
+        await loadNavbar();
+    </script>
+    <script type="module" src="./js/requerimientos.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

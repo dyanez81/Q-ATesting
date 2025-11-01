@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tareas del Requerimiento - QA Finsus</title>
+
+    <!-- Estilos base -->
+    <link rel="stylesheet" href="vendor/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        .pagination {
+            gap: .5rem;
+        }
+
+        .badge-prio-alta {
+            background-color: #dc3545;
+        }
+
+        /* rojo */
+        .badge-prio-media {
+            background-color: #ffc107;
+            color: #000;
+        }
+
+        /* amarillo */
+        .badge-prio-baja {
+            background-color: #28a745;
+        }
+
+        /* verde */
+        .table thead th {
+            white-space: nowrap;
+        }
+
+        .w-180 {
+            min-width: 180px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Contenido principal -->
+    <div class="main-content ">
+        <!-- Encabezado -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2> Tareas del Requerimiento
+            </h2>
+        </div>
+        <div class="d-flex gap-2">
+            <h4 id="tituloVista" class="fw-bold text-primary mb-0">
+                <i class="bi bi-list-check me-2"></i>
+            </h4>
+        </div>
+        <div class="d-flex justify-content-end align-items-end mb-3">
+            <div class="d-flex gap-2">
+                <button id="btnNuevaTarea" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalTarea">
+                    <i class="bi bi-plus-lg me-1"></i> Nueva tarea
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="tablaTareas">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th class="w-180">Folio</th>
+                                <th>Título</th>
+                                <th>Prioridad</th>
+                                <th>Estado</th>
+                                <th>Responsable</th>
+                                <th>Creada</th>
+                                <th class="text-nowrap">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-4">Cargando...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="d-flex justify-content-end align-items-end mt-2 gap-2">
+                    <button id="btnPrev" class="btn btn-outline-secondary btn-sm mr-2">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                    <span id="infoPagina" class="fw-semibold text-primary">Página 1</span>
+                    <button id="btnNext" class="btn btn-outline-secondary btn-sm ml-2">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center gap-2 mt-2">
+            <button id="btnVolver" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Volver a Requerimientos
+            </button>
+            <button id="btnExportarExcel" class="btn btn-outline-success">
+                <i class="bi bi-file-earmark-excel me-1"></i> Exportar
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal Nueva/Editar Tarea -->
+    <div class="modal fade" id="modalTarea" tabindex="-1" aria-labelledby="modalTareaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <form id="formTarea" class="p-0">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="modalTareaLabel">Registrar tarea</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body row g-3">
+                        <input type="hidden" id="tareaId" />
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Folio (Jira)</label>
+                            <input type="text" id="tFolio" class="form-control" required />
+                        </div>
+
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Título</label>
+                            <input type="text" id="tTitulo" class="form-control" required />
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Descripción</label>
+                            <textarea id="tDescripcion" class="form-control" rows="3"></textarea>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Prioridad</label>
+                            <select id="tPrioridad" class="form-control">
+                                <option>Alta</option>
+                                <option>Media</option>
+                                <option>Baja</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Estado</label>
+                            <select id="tEstado" class="form-control">
+                                <option>Pendiente</option>
+                                <option>En progreso</option>
+                                <option>Completada</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Responsable</label>
+                            <select id="tResponsable" class="form-control"></select>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-save me-1"></i> Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navbar/Header -->
+    <script type="module">
+        import { loadNavbar } from './js/ui.js';
+        import { logout } from './js/auth.js';
+        window.logout = logout;
+        loadNavbar();
+    </script>
+
+    <!-- Firebase config y lógica de la vista -->
+    <script type="module" src="./js/firebase-config.js"></script>
+    <script type="module" src="./js/tarea-req.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

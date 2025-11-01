@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Poblar Datos de Prueba - QA Finsus</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+</head>
+
+<body class="bg-light">
+  <div class="container py-5">
+    <div class="card shadow-lg border-0">
+      <div class="card-header bg-primary text-white text-center">
+        <h4 class="mb-0">🚀 Poblar Datos de Prueba - QA Finsus</h4>
+      </div>
+      <div class="card-body text-center">
+        <p class="text-muted">
+          Este script creará 2 aplicaciones de ejemplo en Firestore con requerimientos, tareas, matrices, casos y bugs.
+        </p>
+
+        <button id="btnPoblar" class="btn btn-success btn-lg shadow-sm">
+          <i class="bi bi-cloud-upload"></i> Poblar Firestore
+        </button>
+
+        <!-- 📜 Log visual -->
+        <div id="logContainer" class="mt-4 text-start bg-dark text-white rounded p-3"
+          style="max-height: 400px; overflow-y: auto; font-family: monospace;">
+          <strong>📜 Registro del proceso:</strong>
+          <hr />
+          <div id="logOutput"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from "./js/firebase-config.js";
+    import { collection, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+
+    const log = (msg) => {
+      const out = document.getElementById("logOutput");
+      out.innerHTML += msg + "<br>";
+      out.scrollTop = out.scrollHeight;
+      console.log(msg);
+    };
+
+    async function poblar() {
+      log("🚀 Iniciando carga de datos de prueba...");
+      const appsData = [
+        { nombre: "Finsus App", tipo: "Móvil", version: "2.3.1", estatus: true },
+        { nombre: "Portal Finsus", tipo: "Web", version: "1.9.0", estatus: true },
+      ];
+
+      for (const appItem of appsData) {
+        const appRef = doc(collection(db, "apps"));
+        await setDoc(appRef, {
+          ...appItem,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        log(`✅ App creada: ${appItem.nombre}`);
+
+        // === Requerimiento ===
+        const reqRef = doc(collection(appRef, "requerimientos"));
+        await setDoc(reqRef, {
+          folio: `REQ-${Math.floor(Math.random() * 1000)}`,
+          descripcion: `Requerimiento QA para ${appItem.nombre}`,
+          estado: "En progreso",
+          fechaInicio: serverTimestamp(),
+          fechaFin: null,
+          testerUid: "tester123",
+          testerNombre: "Daniel Yañez",
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        log(`📘 Requerimiento creado (${appItem.nombre})`);
+
+        // === Tareas (2 por requerimiento) ===
+        for (let t = 1; t <= 2; t++) {
+          const tareaRef = doc(collection(reqRef, "tareas"));
+          await setDoc(tareaRef, {
+            folio: `TAR-${t}-${Math.floor(Math.random() * 1000)}`,
+            titulo: `Tarea ${t} para ${appItem.nombre}`,
+            descripcion: "Validación de flujo principal",
+            prioridad: t === 1 ? "Alta" : "Media",
+            estado: "Pendiente",
+            responsableUid: "tester123",
+            responsableNombre: "Daniel Yañez",
+            fechaInicio: serverTimestamp(),
+            fechaFin: null,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+          log(`🧩 Tarea ${t} creada`);
+
+          // === Matriz (1 por tarea) ===
+          const matrizRef = doc(collection(tareaRef, "matrices"));
+          await setDoc(matrizRef, {
+            nombre: `Matriz-${t} ${appItem.nombre}`,
+            modulo: "Transferencias",
+            submodulo: "SPEI",
+            ambiente: "QA",
+            cicloPruebas: 1,
+            fechaInicio: serverTimestamp(),
+            fechaFin: null,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+
+          // === Casos (2 por matriz) ===
+          for (let c = 1; c <= 2; c++) {
+            const casoRef = doc(collection(matrizRef, "casos"));
+            await setDoc(casoRef, {
+              nombreDelCaso: `Caso ${c} - Validar SPEI ${appItem.nombre}`,
+              descripcion: "Validar que la transferencia SPEI se procese correctamente",
+              precondiciones: "Usuario autenticado con saldo suficiente",
+              pasos: "1. Ingresar monto\n2. Confirmar operación\n3. Validar resultado",
+              tipoDePrueba: "Funcional",
+              resultadoEsperado: "La transferencia se realiza con éxito",
+              criterio: true,
+              tipo: "Manual",
+              estado: c === 1 ? "Positivo" : "Pendiente",
+              comentarios: "",
+              evidenciaNombre: "",
+              evidenciaUrl: "",
+              tester: "daniel@finsus.mx",
+              referenciaHU: `HU-${t}${c}`,
+              fechaEjecucion: serverTimestamp(),
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            });
+
+            // === Bug (1 por caso) ===
+            const bugRef = doc(collection(casoRef, "bugs"));
+            await setDoc(bugRef, {
+              nombre: "Error al validar transferencia",
+              descripcion: "La app muestra error 500 al completar la operación",
+              estado: "Abierto",
+              fechaReporte: serverTimestamp(),
+              evidenciaUrl: "https://firebase.storage/bug-evidencia.jpg",
+              tester: "daniel@finsus.mx",
+              datos: {
+                appId: appRef.id,
+                reqId: reqRef.id,
+                tareaId: tareaRef.id,
+                matrizId: matrizRef.id,
+                casoId: casoRef.id,
+                casoNombre: `Caso ${c}`,
+              },
+              solucion: {
+                tester: "",
+                comentarios: "",
+                evidenciaUrl: "",
+                fechaUpdate: null,
+              },
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            });
+          }
+        }
+      }
+
+      Swal.fire("✅ Éxito", "Datos de prueba creados correctamente.", "success");
+      log("🎉 Proceso completado.");
+    }
+
+    document.getElementById("btnPoblar").addEventListener("click", poblar);
+  </script>
+</body>
+
+</html>

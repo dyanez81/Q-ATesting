@@ -149,7 +149,6 @@ export async function loadNavbar() {
 }
 
 // ---------- Contador de tareas ----------
-// 🔹 Contador de tareas pendientes y en progreso
 // 🔹 Contador en tiempo real de tareas Pendientes / En progreso
 export function actualizarContadorTareas() {
   onAuthStateChanged(auth, (user) => {
@@ -176,7 +175,6 @@ export function actualizarContadorTareas() {
     }
   });
 }
-
 
 if (document.readyState !== 'loading') actualizarContadorTareas();
 else document.addEventListener('DOMContentLoaded', actualizarContadorTareas);

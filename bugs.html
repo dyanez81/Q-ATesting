@@ -15,8 +15,7 @@
 <body>
     <div class="main-content">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2>Gestión de Bugs
-            </h2>
+            <h2>Gestión de Bugs</h2>
             <div class="d-flex gap-2">
                 <button id="btnRecargarBugs" class="btn btn-outline-primary btn-sm mr-5">
                     <i class="bi bi-arrow-clockwise"></i>
@@ -40,6 +39,7 @@
                                 <th>Estado</th>
                                 <th>Tester</th>
                                 <th>App / Caso</th>
+                                <th>Fecha</th>
                                 <th>Evidencia</th>
                                 <th>Acciones</th>
                             </tr>
@@ -121,15 +121,28 @@
                     </div>
 
                     <div class="col-12 text-end mt-3">
-                        <button type="submit" class="btn btn-primary w-100">
+                        <!-- ... dentro de #modalBug ... -->
+                        <button type="submit" class="btn btn-primary w-100" form="formBug">
                             <i class="bi bi-save me-2"></i> Guardar Cambios
                         </button>
+
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
+    <!-- 🔄 Modal de carga global -->
+    <div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static"
+        data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-transparent border-0 shadow-none text-center">
+                <div class="spinner-border text-primary" style="width: 4rem; height: 4rem;" role="status">
+                    <span class="visually-hidden">Guardando...</span>
+                </div>
+                <p class="text-white mt-3 fw-semibold">Guardando cambios...</p>
+            </div>
+        </div>
+    </div>
     <!-- Scripts -->
     <script type="module">
         import { loadNavbar } from './js/ui.js';

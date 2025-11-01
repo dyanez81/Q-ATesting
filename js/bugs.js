@@ -23,8 +23,6 @@ import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.2/f
 // --- Referencias DOM ---
 const tabla = document.querySelector('#tablaBugs tbody');
 const form = document.getElementById('formBug');
-const modalEl = document.getElementById('modalBug');
-const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
 const evidenciaInput = document.getElementById('evidenciaSolucion');
 const preview = document.getElementById('previewEvidencia');
 const btnVolver = document.getElementById('btnVolver');
@@ -37,6 +35,27 @@ let lastVisible = null;
 let firstVisible = null;
 let currentPage = 1;
 let lastDocsStack = [];
+
+const modalEl = document.getElementById('modalBug');
+let modal = null;
+function ensureModal() {
+    if (!modal && modalEl && window.bootstrap?.Modal) {
+        modal = new window.bootstrap.Modal(modalEl);
+    }
+}
+// 🔄 Modal de carga
+let loadingModal = null;
+const loadingEl = document.getElementById('loadingModal');
+function showLoading() {
+    if (!loadingModal && window.bootstrap?.Modal) {
+        loadingModal = new bootstrap.Modal(loadingEl);
+    }
+    loadingModal?.show();
+}
+function hideLoading() {
+    loadingModal?.hide();
+}
+
 
 // --- 🔙 Botón Volver a Casos ---
 btnVolver?.addEventListener('click', () => {
@@ -157,6 +176,7 @@ tabla?.addEventListener('click', async (e) => {
 
     if (action === 'editar') {
         try {
+            
             const refBug = doc(db, 'bugs', id);
             const snap = await getDoc(refBug);
             if (!snap.exists()) {
@@ -176,7 +196,9 @@ tabla?.addEventListener('click', async (e) => {
             preview.innerHTML = '';
             if (bug.solucion?.evidencia) renderPreview(bug.solucion.evidencia);
 
-            modal?.show();
+            ensureModal();
+            modal.show();
+
         } catch (err) {
             console.error('❌ Error al cargar bug:', err);
             Swal.fire('Error', 'No se pudo cargar el bug para editar.', 'error');
@@ -233,9 +255,9 @@ form?.addEventListener('submit', async (e) => {
             solucion,
             updatedAt: serverTimestamp(),
         });
-
         Swal.fire('Actualizado', 'Bug actualizado correctamente.', 'success');
-        modal?.hide();
+        ensureModal();
+        modal.hide();
         form.reset();
         cargarBugs(currentPage);
     } catch (err) {

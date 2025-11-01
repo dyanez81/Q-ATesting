@@ -29,6 +29,9 @@ const appId = params.get('app');
 const moduloId = params.get('modulo');
 const matrizId = params.get('id');
 
+// 🔹 Referencia del botón
+const btnExportarExcel = document.getElementById('btnExportarExcel');
+
 if (!appId || !moduloId || !matrizId) {
     Swal.fire('Error', 'No se ha especificado correctamente la matriz.', 'error')
         .then(() => (window.location.href = 'matrices.html'));
@@ -332,5 +335,192 @@ onAuthStateChanged(auth, (user) => {
     } else {
         pintarTituloMatriz();
         cargarCasos();
+    }
+});
+
+// Exportacion a excel
+
+
+btnExportarExcel?.addEventListener('click', async () => {
+    try {
+        btnExportarExcel.disabled = true;
+        btnExportarExcel.innerHTML =
+            '<i class="bi bi-hourglass-split"></i> Exportando...';
+
+        // ==============================
+        // 🧭 Obtener IDs del contexto
+        // ==============================
+        let appId = sessionStorage.getItem("appId");
+        let moduloId = sessionStorage.getItem("moduloId");
+        let matrizId = sessionStorage.getItem("matrizIdActual");
+
+        // 🔍 Si faltan, intentar obtener desde URL o dataset
+        const urlParams = new URLSearchParams(window.location.search);
+        if (!appId) appId = urlParams.get("appId");
+        if (!moduloId) moduloId = urlParams.get("moduloId");
+        if (!matrizId) matrizId = urlParams.get("matrizId");
+
+        // ==============================
+        // 🧾 Depuración
+        // ==============================
+        console.group("🧩 Exportar Excel QA Finsus - Diagnóstico");
+        console.log("App ID:", appId);
+        console.log("Módulo ID:", moduloId);
+        console.log("Matriz ID:", matrizId);
+        console.log("SessionStorage:", {
+            appId: sessionStorage.getItem("appId"),
+            moduloId: sessionStorage.getItem("moduloId"),
+            matrizIdActual: sessionStorage.getItem("matrizIdActual"),
+        });
+        console.groupEnd();
+
+        // ==============================
+        // ⚠️ Validación
+        // ==============================
+        const missing = [];
+        if (!appId) missing.push("appId");
+        if (!moduloId) missing.push("moduloId");
+        if (!matrizId) missing.push("matrizIdActual");
+
+        if (missing.length > 0) {
+            Swal.fire({
+                icon: "warning",
+                title: "⚠️ Faltan datos para exportar",
+                html: `
+        <p>No se pudieron obtener los siguientes identificadores:</p>
+        <ul>${missing.map((x) => `<li><b>${x}</b></li>`).join("")}</ul>
+        <p>Verifica que la matriz esté correctamente seleccionada o abierta.</p>
+      `,
+            });
+            btnExportarExcel.innerHTML =
+                '<i class="bi bi-file-earmark-excel"></i> Exportar a Excel';
+            btnExportarExcel.disabled = false;
+            return;
+        }
+
+        // ==============================
+        // 🔗 Confirmar ruta Firestore
+        // ==============================
+        const matrizPath = `apps/${appId}/modulos/${moduloId}/matrices/${matrizId}`;
+        console.log("📂 Ruta Firestore detectada:", matrizPath);
+
+        const matrizRef = doc(db, matrizPath);
+        const matrizSnap = await getDoc(matrizRef);
+
+        if (!matrizSnap.exists()) {
+            Swal.fire("❌ Error", "No se encontró la matriz seleccionada.", "error");
+            return;
+        }
+
+        const matrizData = matrizSnap.data();
+        const dataCasos = [];
+        const dataBugs = [];
+
+        // ==============================
+        // 📦 Obtener casos
+        // ==============================
+        const casosRef = collection(db, `${matrizPath}/casos`);
+        const casosSnap = await getDocs(casosRef);
+
+        console.log("📊 Casos encontrados:", casosSnap.size);
+
+        if (casosSnap.empty) {
+            Swal.fire("📭 Sin casos", "No hay casos registrados en esta matriz.", "info");
+            return;
+        }
+
+        // Procesar casos
+        for (const casoDoc of casosSnap.docs) {
+            const caso = casoDoc.data();
+            dataCasos.push({
+                "ID Caso": casoDoc.id,
+                "Matriz": matrizData.titulo || matrizId,
+                "Título": caso.titulo || "",
+                "Descripción": caso.descripcion || "",
+                "Estado": caso.estado || "",
+                "Prioridad": caso.prioridad || "",
+                "Tipo": caso.tipo || "",
+                "Responsable": caso.asignadoA || "",
+                "Fecha Creación": caso.fecha?.toDate
+                    ? caso.fecha.toDate().toLocaleString()
+                    : "",
+                "Última Actualización": caso.updatedAt?.toDate
+                    ? caso.updatedAt.toDate().toLocaleString()
+                    : "",
+            });
+
+            // 📋 Obtener bugs
+            const bugsRef = collection(db, `${matrizPath}/casos/${casoDoc.id}/bugs`);
+            const bugsSnap = await getDocs(bugsRef);
+            console.log(`🐞 Bugs para caso ${casoDoc.id}:`, bugsSnap.size);
+
+            for (const bugDoc of bugsSnap.docs) {
+                const bug = bugDoc.data();
+                dataBugs.push({
+                    "Matriz": matrizData.titulo || matrizId,
+                    "Caso": caso.titulo || casoDoc.id,
+                    "Bug ID": bugDoc.id,
+                    "Título": bug.titulo || "",
+                    "Descripción": bug.descripcion || "",
+                    "Severidad": bug.severidad || "",
+                    "Estatus": bug.estatus || "",
+                    "Reportado Por": bug.reportadoPor || "",
+                    "Asignado A": bug.asignadoA || "",
+                    "Fecha Reporte": bug.fecha?.toDate
+                        ? bug.fecha.toDate().toLocaleString()
+                        : "",
+                    "Última Actualización": bug.updatedAt?.toDate
+                        ? bug.updatedAt.toDate().toLocaleString()
+                        : "",
+                });
+            }
+        }
+
+        // ==============================
+        // 📊 Crear y formatear Excel
+        // ==============================
+        const wsCasos = XLSX.utils.json_to_sheet(dataCasos);
+        const wsBugs = XLSX.utils.json_to_sheet(dataBugs);
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, wsCasos, "Casos QA");
+        XLSX.utils.book_append_sheet(wb, wsBugs, "Bugs QA");
+
+        const formatHeaderAndColumns = (ws) => {
+            const range = XLSX.utils.decode_range(ws["!ref"]);
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cell = ws[XLSX.utils.encode_cell({ r: 0, c: C })];
+                if (cell) {
+                    cell.s = {
+                        fill: { fgColor: { rgb: "DDEBF7" } },
+                        font: { bold: true, color: { rgb: "003366" }, sz: 12 },
+                        alignment: { horizontal: "center", vertical: "center", wrapText: true },
+                        border: {
+                            top: { style: "thin", color: { rgb: "BBBBBB" } },
+                            bottom: { style: "thin", color: { rgb: "BBBBBB" } },
+                            left: { style: "thin", color: { rgb: "BBBBBB" } },
+                            right: { style: "thin", color: { rgb: "BBBBBB" } },
+                        },
+                    };
+                }
+            }
+            ws["!cols"] = Array(range.e.c + 1).fill({ wch: 25 });
+        };
+
+        formatHeaderAndColumns(wsCasos);
+        formatHeaderAndColumns(wsBugs);
+
+        const fecha = new Date().toLocaleDateString("es-MX").replace(/\//g, "-");
+        XLSX.writeFile(wb, `Casos_y_Bugs_QA_${fecha}.xlsx`);
+
+        Swal.fire("✅ Exportado", "Archivo Excel generado correctamente.", "success");
+
+    } catch (error) {
+        console.error("❌ Error al exportar:", error);
+        Swal.fire("Error", "No se pudo generar el archivo Excel.", "error");
+    } finally {
+        btnExportarExcel.innerHTML =
+            '<i class="bi bi-file-earmark-excel"></i> Exportar a Excel';
+        btnExportarExcel.disabled = false;
     }
 });
