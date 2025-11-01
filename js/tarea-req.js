@@ -27,23 +27,26 @@ const tEstado = document.getElementById('tEstado');
 const tResponsable = document.getElementById('tResponsable');
 
 const tituloVista = document.getElementById('tituloVista');
+const tMatrizActiva = document.getElementById("tMatrizActiva");
+
+
 
 // ---- Parámetros URL ----
 const params = new URLSearchParams(window.location.search);
-const appId = params.get("appId");
-const reqId = params.get("reqId");
+let appId = params.get("appId");
+let reqId = params.get("reqId");
 
 // Evitar redirección prematura
 // Esperar a que el DOM esté listo
 document.addEventListener('DOMContentLoaded', () => {
-  const params = new URLSearchParams(window.location.search);
-  appId = params.get('appId');
-  reqId = params.get('reqId');
+    const params = new URLSearchParams(window.location.search);
+    appId = params.get('appId');
+    reqId = params.get('reqId');
 
-  if (!appId || !reqId) {
-    console.warn("⚠️ Parámetros faltantes en la URL:", { appId, reqId });
-    // No redirigimos de inmediato, solo notificamos
-  }
+    if (!appId || !reqId) {
+        console.warn("⚠️ Parámetros faltantes en la URL:", { appId, reqId });
+        // No redirigimos de inmediato, solo notificamos
+    }
 });
 
 
@@ -55,8 +58,8 @@ const pageSize = 10;
 // ---- Helpers ----
 const prioridadBadge = (prio) => {
     const p = (prio || '').toLowerCase();
-    if (p === 'alta') return `<span class="badge badge-prio-alta mr-2"><i class="bi bi-exclamation-circle me-1"></i>Alta</span>`;
-    if (p === 'media') return `<span class="badge badge-prio-media mr-2"><i class="bi bi-dash-circle me-1"></i>Media</span>`;
+    if (p === 'alta') return `<span class="badge badge-prio-alta"><i class="bi bi-exclamation-circle me-1 mr-2"></i>Alta</span>`;
+    if (p === 'media') return `<span class="badge badge-prio-media"><i class="bi bi-dash-circle me-1 mr-2"></i>Media</span>`;
     return `<span class="badge badge-prio-baja"><i class="bi bi-check-circle me-1"></i>Baja</span>`;
 };
 
@@ -129,24 +132,30 @@ function renderTabla() {
 
     tablaBody.innerHTML = slice.map((t, idx) => `
     <tr>
-      <td>${start + idx + 1}</td>
-      <td>${t.folio || '-'}</td>
-      <td>${t.titulo || '-'}</td>
-      <td>${prioridadBadge(t.prioridad)}</td>
-      <td>${t.estado || '-'}</td>
-      <td>${t.responsableNombre || '-'}</td>
-      <td>${fmtFecha(t.createdAt) || '-'}</td>
-      <td class="text-nowrap">
+        <td>${start + idx + 1}</td>
+        <td>${t.folio || '-'}</td>
+        <td>${t.titulo || '-'}</td>
+        <td>${prioridadBadge(t.prioridad)}</td>
+        <td>${t.estado || '-'}</td>
+        <td>${t.responsableNombre || '-'}</td>
+        <td>${fmtFecha(t.createdAt) || '-'}</td>
+        <td class="text-center">
+        <div class="form-check form-switch d-inline-flex align-items-center">
+        <input class="form-check-input toggle-matriz" type="checkbox" data-id="${t.id}" ${t.matrizActiva ? 'checked' : ''}>
+        </div><td class="text-nowrap">
         <button class="btn btn-sm btn-outline-primary me-2" data-action="editar" data-id="${t.id}">
-          <i class="bi bi-pencil"></i>
+            <i class="bi bi-pencil"></i>
         </button>
-        <button class="btn btn-sm btn-outline-danger" data-action="eliminar" data-id="${t.id}">
-          <i class="bi bi-trash"></i>
+        <button class="btn btn-sm btn-outline-danger me-2" data-action="eliminar" data-id="${t.id}">
+            <i class="bi bi-trash"></i>
         </button>
-      </td>
+        ${t.matrizActiva ? `
+        <button class="btn btn-sm btn-outline-success" data-action="verMatriz" data-id="${t.id}">
+        <i class="bi bi-diagram-3"></i>
+        </button>` : ''}
+       </td>
     </tr>
-  `).join('');
-
+    `).join('');
     infoPagina.textContent = `Página ${page}`;
 }
 
@@ -176,41 +185,52 @@ btnNuevaTarea?.addEventListener('click', () => {
 });
 
 // ---- Guardar tarea (crear/editar) ----
-formTarea?.addEventListener('submit', async (e) => {
+formTarea.addEventListener("submit", async (e) => {
     e.preventDefault();
+
     try {
-        const sel = tResponsable.selectedOptions[0];
-        const payload = {
+        const tFolio = document.getElementById("tFolio");
+        const tTitulo = document.getElementById("tTitulo");
+        const tDescripcion = document.getElementById("tDescripcion");
+        const tPrioridad = document.getElementById("tPrioridad");
+        const tEstado = document.getElementById("tEstado");
+        const selTester = document.getElementById("tResponsable");
+        const tMatrizActiva = document.getElementById("tMatrizActiva");
+
+        // 🧠 Validar que el elemento exista antes de leerlo
+        const matrizActivaValue = tMatrizActiva ? tMatrizActiva.checked : false;
+
+        const data = {
             folio: tFolio.value.trim(),
             titulo: tTitulo.value.trim(),
             descripcion: tDescripcion.value.trim(),
             prioridad: tPrioridad.value,
             estado: tEstado.value,
-            responsableUid: sel?.value || '',
-            responsableNombre: sel?.textContent || '',
+            responsableUid: selTester?.value || '',
+            responsableNombre: selTester?.selectedOptions[0]?.textContent || '',
+            matrizActiva: matrizActivaValue,
             updatedAt: serverTimestamp()
         };
 
-        const refCol = collection(db, `apps/${appId}/requerimientos/${reqId}/tareas`);
-        const id = tId.value;
-
-        if (id) {
-            // Editar
-            await updateDoc(doc(refCol, id), payload);
-            Swal.fire('✅ Actualizado', 'La tarea se modificó correctamente', 'success');
+        // En la función de guardado
+        if (tId.value) {
+            const ref = doc(db, `apps/${appId}/requerimientos/${reqId}/tareas`, tId.value);
+            await updateDoc(ref, data);
         } else {
-            // Crear
-            await addDoc(refCol, { ...payload, createdAt: serverTimestamp() });
-            Swal.fire('✅ Registrado', 'La tarea se creó correctamente', 'success');
+            data.createdAt = serverTimestamp();
+            const ref = collection(db, `apps/${appId}/requerimientos/${reqId}/tareas`);
+            await addDoc(ref, data);
         }
 
+        bootstrap.Modal.getInstance(document.getElementById('modalTarea')).hide();
         formTarea.reset();
-        modalTarea?.hide();
+
     } catch (err) {
-        console.error('Error guardando tarea:', err);
-        Swal.fire('Error', 'No se pudo guardar la tarea.', 'error');
+        console.error("Error guardando tarea:", err);
+        Swal.fire('Error', 'No se pudo guardar la tarea. Revisa la consola.', 'error');
     }
 });
+
 
 // ---- Acciones tabla (editar / eliminar) ----
 tablaBody?.addEventListener('click', async (e) => {
@@ -222,19 +242,30 @@ tablaBody?.addEventListener('click', async (e) => {
     const refDoc = doc(db, `apps/${appId}/requerimientos/${reqId}/tareas`, id);
 
     if (action === 'editar') {
+        tId.value = id; // Guarda el ID actual para que updateDoc funcione
+        const refDoc = doc(db, `apps/${appId}/requerimientos/${reqId}/tareas`, id);
         const snap = await getDoc(refDoc);
-        if (!snap.exists()) return;
         const t = snap.data();
-        tId.value = id;
-        tFolio.value = t.folio || '';
-        tTitulo.value = t.titulo || '';
-        tDescripcion.value = t.descripcion || '';
-        tPrioridad.value = t.prioridad || 'Media';
-        tEstado.value = t.estado || 'Pendiente';
-        tResponsable.value = t.responsableUid || '';
-        document.getElementById('modalTareaLabel').textContent = 'Editar tarea';
-        modalTarea?.show();
+
+        if (!t) return Swal.fire('Error', 'No se encontró la tarea seleccionada', 'error');
+
+        // 🟢 Espera a que el modal se muestre
+        const modalElement = document.getElementById('modalTarea');
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+
+        // 🕐 Espera a que el DOM del modal esté listo
+        modalElement.addEventListener('shown.bs.modal', () => {
+            document.getElementById('tFolio').value = t.folio || '';
+            document.getElementById('tTitulo').value = t.titulo || '';
+            document.getElementById('tDescripcion').value = t.descripcion || '';
+            document.getElementById('tPrioridad').value = t.prioridad || 'Media';
+            document.getElementById('tEstado').value = t.estado || 'Pendiente';
+            document.getElementById('tResponsable').value = t.responsableUid || '';
+            document.getElementById('matrizActiva').checked = t.matrizActiva || false;
+        }, { once: true });
     }
+
 
     if (action === 'eliminar') {
         const conf = await Swal.fire({
@@ -250,6 +281,33 @@ tablaBody?.addEventListener('click', async (e) => {
         Swal.fire('🗑️ Eliminada', 'La tarea fue eliminada.', 'success');
     }
 });
+
+// ---- Toggle de Matriz activa ----
+tablaBody?.addEventListener('change', async (e) => {
+    const input = e.target.closest('.toggle-matriz');
+    if (!input) return;
+
+    const id = input.dataset.id;
+    const activo = input.checked;
+    const refDoc = doc(db, `apps/${appId}/requerimientos/${reqId}/tareas`, id);
+    await updateDoc(refDoc, { matrizActiva: activo });
+
+    if (activo) {
+        Swal.fire('✅ Activada', 'La matriz ha sido habilitada para esta tarea.', 'success');
+    } else {
+        Swal.fire('ℹ️ Desactivada', 'La matriz se ha deshabilitado.', 'info');
+    }
+    suscribirTareas();
+});
+
+// ---- Ir a vista de matrices ----
+tablaBody?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action="verMatriz"]');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    window.location.href = `matrices.html?appId=${appId}&reqId=${reqId}&tareaId=${id}`;
+});
+
 
 // ---- Exportar Excel ----
 btnExportarExcel?.addEventListener('click', async () => {

@@ -78,6 +78,7 @@
                                 <th>Estado</th>
                                 <th>Responsable</th>
                                 <th>Creada</th>
+                                <th>Matriz</th>
                                 <th class="text-nowrap">Acciones</th>
                             </tr>
                         </thead>
@@ -101,7 +102,7 @@
         </div>
         <div class="d-flex justify-content-between align-items-center gap-2 mt-2">
             <button id="btnVolver" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i> Volver a Requerimientos
+                <i class="bi bi-arrow-left me-1 "></i> Volver a Requerimientos
             </button>
             <button id="btnExportarExcel" class="btn btn-outline-success">
                 <i class="bi bi-file-earmark-excel me-1"></i> Exportar
@@ -159,7 +160,14 @@
                             <select id="tResponsable" class="form-control"></select>
                         </div>
                     </div>
+                    <div class="col-md-6 d-flex align-items-center">
+                        <!-- Dentro del modal -->
+                        <div class="form-check form-switch mt-4">
+                            <input class="form-check-input ml-2" type="checkbox" id="matrizActiva">
+                            <label class="form-check-label ml-2" for="matrizActiva">Matriz activa</label>
+                        </div>
 
+                    </div>
                     <div class="modal-footer">
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="bi bi-save me-1"></i> Guardar
